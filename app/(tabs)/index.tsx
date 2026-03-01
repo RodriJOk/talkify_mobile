@@ -1,24 +1,21 @@
-import { FontAwesome, FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Constants from 'expo-constants';
-import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
-import Purchases, { LOG_LEVEL } from 'react-native-purchases';
 
 // --- Configuración de Notificaciones ---
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+// Notifications.setNotificationHandler({
+//   handleNotification: async () => ({
+//     shouldPlaySound: true,
+//     shouldSetBadge: true,
+//     shouldShowBanner: true,
+//     shouldShowList: true,
+//   }),
+// });
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -41,119 +38,119 @@ export default function HomeScreen() {
     });
   }, []);
 
-  const registerForPushNotificationsAsync = useCallback(async () => {
-    if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'default',
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#FF231F7C',
-      });
-    }
+  // const registerForPushNotificationsAsync = useCallback(async () => {
+  //   if (Platform.OS === 'android') {
+  //     await Notifications.setNotificationChannelAsync('default', {
+  //       name: 'default',
+  //       importance: Notifications.AndroidImportance.MAX,
+  //       vibrationPattern: [0, 250, 250, 250],
+  //       lightColor: '#FF231F7C',
+  //     });
+  //   }
 
-    if (Device.isDevice) {
-      // 1. Obtener estado de permisos
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
+  //   if (Device.isDevice) {
+  //     // 1. Obtener estado de permisos
+  //     const { status: existingStatus } = await Notifications.getPermissionsAsync();
+  //     let finalStatus = existingStatus;
       
-      if (existingStatus !== 'granted') {
-        // 2. Solicitar permisos si no están otorgados
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-      }
+  //     if (existingStatus !== 'granted') {
+  //       // 2. Solicitar permisos si no están otorgados
+  //       const { status } = await Notifications.requestPermissionsAsync();
+  //       finalStatus = status;
+  //     }
       
-      if (finalStatus !== 'granted') {
-        handleRegistrationError('Permisos denegados para notificaciones push', 'error');
-        return;
-      }
+  //     if (finalStatus !== 'granted') {
+  //       handleRegistrationError('Permisos denegados para notificaciones push', 'error');
+  //       return;
+  //     }
       
-      // 3. Obtener Project ID (Necesario para getExpoPushTokenAsync)
-      const projectId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
-      if (!projectId) {
-        handleRegistrationError('Ocurrió un error al obtener el ID del proyecto', 'error');
-        return;
-      }
+  //     // 3. Obtener Project ID (Necesario para getExpoPushTokenAsync)
+  //     const projectId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
+  //     if (!projectId) {
+  //       handleRegistrationError('Ocurrió un error al obtener el ID del proyecto', 'error');
+  //       return;
+  //     }
       
-      // 4. Obtener el token
-      try {
-        const pushTokenString = (
-          await Notifications.getExpoPushTokenAsync({
-            projectId,
-          })
-        ).data;
-        handleRegistrationError(`Token de notificación push registrado`, 'success');
-        return pushTokenString;
-      } catch (e: any) {
-        handleRegistrationError(`Error al obtener token push: ${e.message || e}`, 'error');
-      }
+  //     // 4. Obtener el token
+  //     try {
+  //       const pushTokenString = (
+  //         await Notifications.getExpoPushTokenAsync({
+  //           projectId,
+  //         })
+  //       ).data;
+  //       handleRegistrationError(`Token de notificación push registrado`, 'success');
+  //       return pushTokenString;
+  //     } catch (e: any) {
+  //       handleRegistrationError(`Error al obtener token push: ${e.message || e}`, 'error');
+  //     }
 
-    } else {
-      handleRegistrationError('Debe usar un dispositivo físico para notificaciones push', 'error');
-      return;
-    }
-  }, [handleRegistrationError]);
+  //   } else {
+  //     handleRegistrationError('Debe usar un dispositivo físico para notificaciones push', 'error');
+  //     return;
+  //   }
+  // }, [handleRegistrationError]);
 
-  const savePushTokenToServer = useCallback(async (notificationPushToken: string, userId: string) => {
-    const currentAuthToken = await AsyncStorage.getItem('token'); // Obtener el token de autenticación
+  // const savePushTokenToServer = useCallback(async (notificationPushToken: string, userId: string) => {
+  //   const currentAuthToken = await AsyncStorage.getItem('token'); // Obtener el token de autenticación
     
-    if (!currentAuthToken) {
-        handleRegistrationError('Token de autenticación faltante', 'error');
-        return;
-    }
+  //   if (!currentAuthToken) {
+  //       handleRegistrationError('Token de autenticación faltante', 'error');
+  //       return;
+  //   }
 
-    const data = {
-      "expo_push_token": notificationPushToken,
-      "id_user": userId
-    }; 
+  //   const data = {
+  //     "expo_push_token": notificationPushToken,
+  //     "id_user": userId
+  //   }; 
     
-    try {
-      const response = await fetch('https://reservatucorte.com.ar/api/save_expo_push_token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${currentAuthToken}`
-        },
-        body: JSON.stringify(data),
-      });
+  //   try {
+  //     const response = await fetch('https://reservatucorte.com.ar/api/save_expo_push_token', {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //         'Authorization': `Bearer ${currentAuthToken}`
+  //       },
+  //       body: JSON.stringify(data),
+  //     });
 
-      const responseData = await response.json();
+  //     const responseData = await response.json();
       
-      if (!response.ok) {
-        // Error de servidor
-        handleRegistrationError(responseData.message || 'Error al guardar token en servidor', 'error');
-        return;
-      }
+  //     if (!response.ok) {
+  //       // Error de servidor
+  //       handleRegistrationError(responseData.message || 'Error al guardar token en servidor', 'error');
+  //       return;
+  //     }
       
-      const userInfo = await AsyncStorage.getItem('user_information');
-      if (userInfo) {
-        const userObj = JSON.parse(userInfo);
-        userObj.user.expo_push_token = notificationPushToken;
-        await AsyncStorage.setItem('user_information', JSON.stringify(userObj));
-      }
+  //     const userInfo = await AsyncStorage.getItem('user_information');
+  //     if (userInfo) {
+  //       const userObj = JSON.parse(userInfo);
+  //       userObj.user.expo_push_token = notificationPushToken;
+  //       await AsyncStorage.setItem('user_information', JSON.stringify(userObj));
+  //     }
       
-      handleRegistrationError('Token de notificación push guardado exitosamente', 'success');
-    } catch (error: any) {
-      handleRegistrationError(`Error de red al guardar token push: ${error.message || error}`, 'error');
-    }
-  }, [handleRegistrationError]);
+  //     handleRegistrationError('Token de notificación push guardado exitosamente', 'success');
+  //   } catch (error: any) {
+  //     handleRegistrationError(`Error de red al guardar token push: ${error.message || error}`, 'error');
+  //   }
+  // }, [handleRegistrationError]);
 
-  const registerForPushNotifications = useCallback(async (userId: string, userInfo: any) => {
-    // 1. Obtener el token actual del dispositivo
-    const notificationPushToken = await registerForPushNotificationsAsync();
+  // const registerForPushNotifications = useCallback(async (userId: string, userInfo: any) => {
+  //   // 1. Obtener el token actual del dispositivo
+  //   const notificationPushToken = await registerForPushNotificationsAsync();
     
-    if (notificationPushToken) {
-      setExpoPushToken(notificationPushToken);
+  //   if (notificationPushToken) {
+  //     setExpoPushToken(notificationPushToken);
       
-      // 2. Comparar con el token que ya tenemos guardado localmente
-      const savedToken = userInfo?.user?.expo_push_token;
+  //     // 2. Comparar con el token que ya tenemos guardado localmente
+  //     const savedToken = userInfo?.user?.expo_push_token;
 
-      if (notificationPushToken !== savedToken) {
-        await savePushTokenToServer(notificationPushToken, userId);
-      } else {
-        console.log('El token es el mismo. No hace falta actualizar el servidor.');
-      }
-    }
-  }, [registerForPushNotificationsAsync, savePushTokenToServer]);
+  //     if (notificationPushToken !== savedToken) {
+  //       await savePushTokenToServer(notificationPushToken, userId);
+  //     } else {
+  //       console.log('El token es el mismo. No hace falta actualizar el servidor.');
+  //     }
+  //   }
+  // }, [registerForPushNotificationsAsync, savePushTokenToServer]);
 
 
   // --- Función de Carga Inicial (solo una vez) ---
@@ -175,7 +172,7 @@ export default function HomeScreen() {
       setToken(currentToken);
 
       if (currentUserId) {
-          await registerForPushNotifications(currentUserId, session); 
+          // await registerForPushNotifications(currentUserId, session); 
       }
 
       setIsInitialLoadDone(true);
@@ -183,22 +180,11 @@ export default function HomeScreen() {
       handleRegistrationError(`Error crítico al cargar: ${error.message || error}`, 'error');
       router.replace('/singin');
     }
-  }, [router, registerForPushNotifications, handleRegistrationError]);
+  }, [router, handleRegistrationError]);
+  // }, [router, registerForPushNotifications, handleRegistrationError]);
 
   // --- Carga inicial solo una vez al montar ---
   useEffect(() => {
-    Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
-
-    // Platform-specific API keys
-    const iosApiKey = 'test_iwbkorYVRAiCefjPvnARnkNYeFY';
-    const androidApiKey = 'test_iwbkorYVRAiCefjPvnARnkNYeFY';
-
-    if (Platform.OS === 'ios') {
-       Purchases.configure({apiKey: iosApiKey});
-    } else if (Platform.OS === 'android') {
-       Purchases.configure({apiKey: androidApiKey});
-    }
-
     handleInitialLoad();
 
     // Configurar listeners de notificaciones 
@@ -215,7 +201,7 @@ export default function HomeScreen() {
       notificationListener.remove();
       responseListener.remove();
     };
-  }, []); // Solo ejecutar al montar
+  }, [handleInitialLoad]); // Solo ejecutar al montar
 
   // --- Recargar datos cuando la pantalla recibe foco (detecta cambios de sesión) ---
   useFocusEffect(
@@ -275,7 +261,6 @@ export default function HomeScreen() {
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.header}>
           <Image
-            // source={userImage ? { uri: userImage } : require('@/assets/images/white_logo_transparent_background.png')}
             source={require('@/assets/images/neon_icon_small.png')}
             style={styles.userImage}
             resizeMode="contain"
