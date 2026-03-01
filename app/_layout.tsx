@@ -5,12 +5,11 @@ import { DrawerContentComponentProps, DrawerContentScrollView, DrawerItem } from
 import { useFonts } from 'expo-font';
 import { usePathname, useRouter } from 'expo-router';
 import { Drawer } from 'expo-router/drawer';
-import React from 'react';
-import { Alert, StyleSheet, View, Platform } from 'react-native';
+import React, { useEffect } from 'react';
+import { Alert, Platform, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import Toast from 'react-native-toast-message';
-import { useEffect } from 'react';
 import Purchases, { LOG_LEVEL } from 'react-native-purchases';
+import Toast from 'react-native-toast-message';
 
 // --- Contenido Personalizado del Drawer ---
 function CustomDrawerContent(props: DrawerContentComponentProps) {
@@ -117,6 +116,46 @@ export default function RootLayout() {
   const hideTabBarScreens = ['/singin', '/register', '/forget_password', '/terms_and_conditions'];
   const shouldShowTabBar = !hideTabBarScreens.some(screen => pathname.startsWith(screen));
 
+  // --- Configuración de RevenueCat (una sola vez al iniciar la app) ---
+  useEffect(() => {
+    const initRevenueCat = () => {
+      try {
+        Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
+
+        const appEnv = 'production';
+
+        const iosApiKey = 'appl_mTpdbKsVxQhYewwMFpifOTIjhKO';
+
+        const androidApiKey = 'goog_BZzTuGaPdPVkvCZUpkXNyYPIeHd';
+
+        const selectedApiKey = Platform.OS === 'ios' ? iosApiKey : androidApiKey;
+
+        // Validar formato según entorno
+        const isValidKey = Platform.OS === 'ios'
+          ? selectedApiKey.startsWith('appl_')
+          : selectedApiKey.startsWith('goog_');
+
+        if (!selectedApiKey) {
+          console.error('[RevenueCat] No hay API key configurada');
+          return;
+        }
+
+        if (!isValidKey) {
+          console.warn(
+            `[RevenueCat] Key sospechosa para ${appEnv}: esperaba ${Platform.OS === 'ios' ? 'appl_' : 'goog_'} pero recibió ${selectedApiKey.substring(0, 5)}...`
+          );
+        }
+
+        Purchases.configure({ apiKey: selectedApiKey });
+        console.log(`[RevenueCat] ✅ Configurado para ${appEnv} (${Platform.OS}) con key ${selectedApiKey.substring(0, 8)}...`);
+      } catch (error: any) {
+        console.error('[RevenueCat] ❌ Error al inicializar:', error?.message || error);
+      }
+    };
+
+    initRevenueCat();
+  }, []);
+
   if (!fontsLoaded) {
     return null;
   }
@@ -144,6 +183,9 @@ export default function RootLayout() {
           <Drawer.Screen name="subscription" options={{ title: 'Suscripcion' }} />
           <Drawer.Screen name="settings" options={{ title: 'Configuracion' }} />
           <Drawer.Screen name="singin" options={{ headerShown: false, drawerItemStyle: { display: 'none' } }} />
+          <Drawer.Screen name="forget_password" options={{ headerShown: false, drawerItemStyle: { display: 'none' } }} />
+          <Drawer.Screen name="register" options={{ headerShown: false, drawerItemStyle: { display: 'none' } }} />
+          <Drawer.Screen name="terms_and_conditions" options={{ headerShown: false, drawerItemStyle: { display: 'none' } }} />
           <Drawer.Screen name="+not-found" options={{ drawerItemStyle: { display: 'none' } }} />
           
           {/* Ejemplo: Si 'my_professionals' no está en tabs, debe declararse aquí para que la navegación funcione */}
@@ -160,34 +202,7 @@ export default function RootLayout() {
 
           {/* Pantallas que se abren por navegación pero no se muestran en el drawer */}
           <Drawer.Screen name="edit_branch/[id]" options={{ title: 'Editar Sucursal', drawerItemStyle: { display: 'none' } }} />
-          <Drawer.Screen name="new_branch" options={{ title: 'Nueva Sucursal', drawerItemStyle: { display: 'none' } }} />
-          <Drawer.Screen name="new_event/[id]" options={{ title: 'Reserva tu turno', drawerItemStyle: { display: 'none' } }} />
-          <Drawer.Screen name="edit_client/[id]" options={{ title: 'Editar Cliente', drawerItemStyle: { display: 'none' } }} />
-          <Drawer.Screen name="edit_service/[id]" options={{ title: 'Editar Servicio', drawerItemStyle: { display: 'none' } }} />
-          <Drawer.Screen name="new_service" options={{ title: 'Nuevo Servicio', drawerItemStyle: { display: 'none' } }} />
-          <Drawer.Screen name="edit_professional/[id]" options={{ title: 'Editar Profesional', drawerItemStyle: { display: 'none' } }} />
-          <Drawer.Screen name="new_professional" options={{ title: 'Nuevo Profesional', drawerItemStyle: { display: 'none' } }} />
-          <Drawer.Screen name="my_professional_availability/[id]" options={{ title: 'Disponibilidad horaria', drawerItemStyle: { display: 'none' } }} />
-          <Drawer.Screen name="my_professional_unavailability/[id]" options={{ title: 'Eventualidades/Inasistencias', drawerItemStyle: { display: 'none' } }} />
-          <Drawer.Screen name="new_client" options={{ title: 'Nuevo Cliente', drawerItemStyle: { display: 'none' } }} />
-          <Drawer.Screen name="new_coupon" options={{ title: 'Nuevo Cupón', drawerItemStyle: { display: 'none' } }} />
-          <Drawer.Screen name="edit_coupon/[id]" options={{ title: 'Editar Cupón', drawerItemStyle: { display: 'none' } }} />
-          <Drawer.Screen name="register" options={{ headerShown: false, drawerItemStyle: { display: 'none' } }} />
-          <Drawer.Screen name="forget_password" options={{ headerShown: false, drawerItemStyle: { display: 'none' } }} />
-          <Drawer.Screen name="terms_and_conditions" options={{ title: 'Términos y Condiciones', drawerItemStyle: { display: 'none' } }} />
-          <Drawer.Screen name="(tabs)/my_suscription" options={{ title: 'Mis suscripciones' }} />
-          <Drawer.Screen name="(tabs)/my_calendar" options={{ title: 'Mi Calendario' }} />
-          <Drawer.Screen name="(tabs)/my_shift_reservation" options={{ title: 'Mis turnos' }} />
-          <Drawer.Screen name="(tabs)/index" options={{ title: 'Inicio' }} />
-          <Drawer.Screen name="(tabs)/scan_qr" options={{ title: 'Escanear QR', drawerItemStyle: { display: 'none' } }} />
-          <Drawer.Screen name="my_shift_reservation_client" options={{ title: 'Mis turnos solicitados', drawerItemStyle: { display: 'none' } }} />
-          <Drawer.Screen name="my_calendar_collaborator" options={{ title: 'Mi Calendario', drawerItemStyle: { display: 'none' } }} />
-          <Drawer.Screen name="my_branch_collaborator" options={{ title: 'Mi Sucursal', drawerItemStyle: { display: 'none' } }} />
-          <Drawer.Screen name="my_professional_services" options={{ title: 'Mis Servicios', drawerItemStyle: { display: 'none' } }} />
-          <Drawer.Screen name="my_scheduler_collaborator" options={{ title: 'Mis Horarios', drawerItemStyle: { display: 'none' } }} />
-          <Drawer.Screen name="payment_settings" options={{ title: 'Configuración de Pago', drawerItemStyle: { display: 'none' } }} />
-          <Drawer.Screen name="my_campaigns" options={{ title: 'Mis Campañas' }} />
-          <Drawer.Screen name="new_campaigns" options={{ title: 'Nueva Campaña', drawerItemStyle: { display: 'none' } }} />
+          <Drawer.Screen name="subscription_plans" options={{ title: 'Planes de suscripción', drawerItemStyle: { display: 'none' } }} />
         </Drawer>
         
         {/* Mostrar la barra de navegación inferior en todas las pantallas excepto login */}

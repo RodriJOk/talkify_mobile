@@ -1,10 +1,17 @@
-import React, { useState, useEffect } from 'react';
 import { Image } from 'expo-image';
-import { StyleSheet, TextInput, TouchableOpacity, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Toast from 'react-native-toast-message';
 
 export default function ForgetPassword() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
+
+  const goBack = () => {
+    router.replace('/singin');
+  };
 
   const resetPassword = async () => {
     if (!email) {
@@ -62,10 +69,24 @@ export default function ForgetPassword() {
           />
         </View>
         <View style={styles.container_buttons_CTA}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={goBack}
+          >
+            <Text style={styles.buttonText}>Volver</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity 
             style={styles.button} 
             onPress={resetPassword}>
-              <Text style={styles.buttonText}>Enviar</Text>
+              <LinearGradient
+                colors={['#6366f1', '#a855f7']}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={styles.buttonGradient}
+              >
+                <Text style={styles.buttonText}>Enviar</Text>
+              </LinearGradient>
           </TouchableOpacity>
         </View>
         <Toast />
@@ -110,21 +131,35 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Regular',
   },
   button: {
-    backgroundColor: '#012e46',
-    paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 12,
+    height: 45,
+    width: '48%',
+    shadowColor: 'rgba(168, 85, 247, 0.4)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 15,
+    elevation: 8,
+  },
+  backButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: '#6366f1',
+    borderRadius: 12,
+    height: 45,
+    width: '48%',
     alignItems: 'center',
-    fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-    marginBottom: 8,
+    justifyContent: 'center',
+  },
+  buttonGradient: {
     flex: 1,
-    width: '100%',
-    fontWeight: 'bold',
-    
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   buttonText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: '600',
   },
   link: {
     color: '#007BFF',
@@ -140,7 +175,7 @@ const styles = StyleSheet.create({
   },
   container_buttons_CTA:{
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     gap: 8,
     marginTop: 16,
   },

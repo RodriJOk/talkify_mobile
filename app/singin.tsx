@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -138,9 +139,16 @@ export default function SingIn() {
                     <Text style={styles.buttonText}>Registrarse</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
-                    style={styles.button} 
+                    style={styles.loginButton} 
                     onPress={handleLogin}>
-                    <Text style={styles.buttonText}>Ingresar</Text>
+                    <LinearGradient
+                      colors={['#6366f1', '#a855f7']}
+                      start={{ x: 0, y: 0.5 }}
+                      end={{ x: 1, y: 0.5 }}
+                      style={styles.loginButtonGradient}
+                    >
+                      <Text style={styles.buttonText}>Ingresar</Text>
+                    </LinearGradient>
                 </TouchableOpacity>
             </View>
             <Toast />
@@ -176,21 +184,40 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   button: {
-    backgroundColor: '#012e46',
-    paddingVertical: 14,
-    borderRadius: 8,
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: '#6366f1',
+    borderRadius: 12,
+    height: 45,
     alignItems: 'center',
+    justifyContent: 'center',
+    width: '48%',
+  },
+  loginButton: {
+    borderRadius: 12,
+    width: '48%',
+    height: 45,
+    shadowColor: 'rgba(168, 85, 247, 0.4)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 15,
+    elevation: 8,
+  },
+  loginButtonGradient: {
     flex: 1,
-    width: '100%',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   buttonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
     fontFamily: 'Poppins-Regular',
   },
   link: {
-    color: '#007BFF',
+    color: '#a855f7',
+    fontSize: 14,
     textAlign: 'center',
   },
   label: {
@@ -202,7 +229,7 @@ const styles = StyleSheet.create({
   },
   container_buttons_CTA:{
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     gap: 16,
     marginTop: 24,
   },

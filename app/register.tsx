@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'expo-router';
-import { StyleSheet, TextInput, TouchableOpacity, Text, View, Switch, Platform } from 'react-native';
-import Toast from 'react-native-toast-message';
-import {Picker} from '@react-native-picker/picker';
-import { ScrollView } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import { StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
+import Toast from 'react-native-toast-message';
 
 export default function SingIn() {
   const router = useRouter();
@@ -117,7 +117,7 @@ export default function SingIn() {
         router.push('/');
       }, 3000);
 
-    } catch (err) {
+    } catch (err: any) {
       Toast.show({
         type: 'error',
         text1: 'Error al crear el usuario.',
@@ -131,8 +131,12 @@ export default function SingIn() {
     router.push('/terms_and_conditions');
   }
 
+  const goBack = () => {
+    router.replace('/singin');
+  }
+
   return (
-    <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+    <ScrollView contentContainerStyle={styles.scrollContent}>
       <View style={styles.container}>
           <Text style={ styles.headerText }>
               Registrate
@@ -208,9 +212,22 @@ export default function SingIn() {
                   </Text>
               </Text>
           </View>
-          <TouchableOpacity style={styles.button} onPress={handleRegister}>
-              <Text style={styles.buttonText}>Crear Usuario</Text>
-          </TouchableOpacity>
+          <View style={styles.container_buttons_CTA}>
+            <TouchableOpacity style={styles.backButton} onPress={goBack}>
+              <Text style={styles.buttonText}>Volver</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.button} onPress={handleRegister}>
+              <LinearGradient
+                colors={['#6366f1', '#a855f7']}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={styles.buttonGradient}
+              >
+                <Text style={styles.buttonText}>Crear Usuario</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
           <Toast />
       </View>
     </ScrollView>
@@ -218,11 +235,14 @@ export default function SingIn() {
 }
 
 const styles = StyleSheet.create({
+  scrollContent: {
+    flexGrow: 1,
+  },
   container: {
     flex: 1, 
     backgroundColor: '#000a23', 
     padding: 16, 
-    height: '100%', 
+    justifyContent: 'center',
     fontFamily: 'Poppins-Regular',
   },
   headerText: {
@@ -267,18 +287,37 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Regular',
   },
   button: {
-    backgroundColor: '#007BFF',
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-    fontWeight: 'bold',
+    borderRadius: 12,
+    height: 45,
+    width: '48%',
+    shadowColor: 'rgba(168, 85, 247, 0.4)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 15,
+    elevation: 8,
     marginVertical: 16,
+  },
+  backButton: {
+    backgroundColor: 'transparent',
+    height: 45,
+    borderWidth: 2,
+    borderColor: '#6366f1',
+    borderRadius: 12,
+    width: '48%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 16,
+  },
+  buttonGradient: {
+    flex: 1,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   buttonText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: '600',
   },
   link: {
     color: '#007BFF',
@@ -305,5 +344,10 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     marginBottom: 16,
     justifyContent: 'center',
+  },
+  container_buttons_CTA: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
   },
 });
