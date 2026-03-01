@@ -1,36 +1,69 @@
-import { Picker } from '@react-native-picker/picker';
 import React, { useEffect, useState } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import Purchases from 'react-native-purchases';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const pickerOptionColor = Platform.OS === 'android' ? '#111111' : '#FFFFFF';
-const pickerPlaceholderColor = Platform.OS === 'android' ? '#6B7280' : '#8EA0C1';
-
 type PackageItem = {
   identifier: string;
+  packageType?: string;
   product: {
     title?: string;
     description?: string;
     priceString?: string;
+    subscriptionPeriod?: string;
   };
 };
 
 export default function SubscriptionPlansScreen() {
-  const [packages, setPackages] = useState<PackageItem[]>([]);
-  const [selectedPlan, setSelectedPlan] = useState('');
+  const [monthlyPlan, setMonthlyPlan] = useState<PackageItem | null>(null);
+  const [annualPlan, setAnnualPlan] = useState<PackageItem | null>(null);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     const loadPlans = async () => {
       try {
+        setLoadError('');
         const offerings = await Purchases.getOfferings();
         const currentPackages = (offerings.current?.availablePackages ?? []) as PackageItem[];
-        setPackages(currentPackages);
-        if (currentPackages.length > 0) {
-          setSelectedPlan(String(currentPackages[0].identifier));
-        }
+
+        const monthly = currentPackages.find((item) => {
+          const packageType = String(item.packageType ?? '').toUpperCase();
+          const period = String(item.product?.subscriptionPeriod ?? '').toUpperCase();
+          const title = String(item.product?.title ?? '').toLowerCase();
+          const identifier = String(item.identifier ?? '').toLowerCase();
+
+          return (
+            packageType === 'MONTHLY' ||
+            period.includes('P1M') ||
+            title.includes('mes') ||
+            title.includes('monthly') ||
+            identifier.includes('month') ||
+            identifier.includes('mensual')
+          );
+        });
+
+        const annual = currentPackages.find((item) => {
+          const packageType = String(item.packageType ?? '').toUpperCase();
+          const period = String(item.product?.subscriptionPeriod ?? '').toUpperCase();
+          const title = String(item.product?.title ?? '').toLowerCase();
+          const identifier = String(item.identifier ?? '').toLowerCase();
+
+          return (
+            packageType === 'ANNUAL' ||
+            period.includes('P1Y') ||
+            title.includes('anual') ||
+            title.includes('annual') ||
+            identifier.includes('year') ||
+            identifier.includes('anual')
+          );
+        });
+
+        setMonthlyPlan(monthly ?? null);
+        setAnnualPlan(annual ?? null);
       } catch (error) {
-        setPackages([]);
+        setMonthlyPlan(null);
+        setAnnualPlan(null);
+        setLoadError('No se pudieron cargar los planes.');
       }
     };
 
@@ -46,45 +79,43 @@ export default function SubscriptionPlansScreen() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardEyebrow}>SELECCIONA UN PLAN</Text>
+          <Text style={styles.cardEyebrow}>PLANES DISPONIBLES</Text>
 
-          <View style={styles.selectField}>
-            <Picker
-              selectedValue={selectedPlan}
-              onValueChange={(value) => setSelectedPlan(String(value))}
-              style={styles.picker}
-              dropdownIconColor="#FFFFFF"
-              mode="dropdown"
-            >
-              <Picker.Item label="Selecciona un plan" value="" color={pickerPlaceholderColor} />
-              {packages.map((item) => {
-                const title = item?.product?.title ?? 'Plan';
-                const price = item?.product?.priceString ?? '';
-                const label = price ? `${title} (${price})` : title;
-                return (
-                  <Picker.Item
-                    key={String(item.identifier)}
-                    label={label}
-                    value={String(item.identifier)}
-                    color={pickerOptionColor}
-                  />
-                );
-              })}
-            </Picker>
-          </View>
+          {!!loadError && <Text style={styles.errorText}>{loadError}</Text>}
 
-          {packages.map((item) => {
-            const title = item?.product?.title ?? 'Plan';
-            const description = item?.product?.description ?? 'Sin descripcion.';
-            const price = item?.product?.priceString ?? '';
-            return (
-              <View key={item.identifier} style={styles.planCard}>
-                <Text style={styles.planTitle}>{title}</Text>
-                <Text style={styles.planDescription}>{description}</Text>
-                <Text style={styles.planPrice}>{price}</Text>
-              </View>
-            );
-          })}
+          {monthlyPlan ? (
+            <View style={styles.planCard}>
+              <Text style={styles.planTitle}>Plan mensual</Text>
+              <Text style={styles.planDescription}>
+                {monthlyPlan?.product?.description ?? 'Duración: 30 días.'}
+              </Text>
+              <Text style={styles.planDescription}>Duración: 30 días.</Text>
+              <Text style={styles.planPrice}>{monthlyPlan?.product?.priceString ?? '-'}</Text>
+            </View>
+          ) : (
+            <View style={styles.planCard}>
+              <Text style={styles.planTitle}>Plan mensual</Text>
+              <Text style={styles.planDescription}>Duración: 30 días.</Text>
+              <Text style={styles.planDescription}>No disponible por el momento.</Text>
+            </View>
+          )}
+
+          {annualPlan ? (
+            <View style={styles.planCard}>
+              <Text style={styles.planTitle}>Plan anual</Text>
+              <Text style={styles.planDescription}>
+                {annualPlan?.product?.description ?? 'Duración: 1 año.'}
+              </Text>
+              <Text style={styles.planDescription}>Duración: 1 año.</Text>
+              <Text style={styles.planPrice}>{annualPlan?.product?.priceString ?? '-'}</Text>
+            </View>
+          ) : (
+            <View style={styles.planCard}>
+              <Text style={styles.planTitle}>Plan anual</Text>
+              <Text style={styles.planDescription}>Duración: 1 año.</Text>
+              <Text style={styles.planDescription}>No disponible por el momento.</Text>
+            </View>
+          )}
         </View>
       </View>
     </SafeAreaView>
@@ -137,18 +168,10 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     fontWeight: '700',
   },
-  selectField: {
-    minHeight: 44,
-    width: '100%',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#6D42D8',
-    backgroundColor: '#0A1026',
-    paddingHorizontal: 8,
-    justifyContent: 'center',
-  },
-  picker: {
-    color: '#FFFFFF',
+  errorText: {
+    color: '#FF5C7A',
+    fontSize: 13,
+    fontWeight: '600',
   },
   planCard: {
     borderRadius: 14,

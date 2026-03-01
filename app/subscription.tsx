@@ -93,12 +93,15 @@ export default function SubscriptionScreen() {
         });
 
         const data = await response.json();
-        console.log('Respuesta del backend para estado de suscripción:', data);
         if (!response.ok) {
-          throw new Error(data?.message || 'No se pudo cargar el estado de suscripcion.');
+          throw new Error(data?.message || data?.error || 'No se pudo cargar el estado de suscripcion.');
         }
 
-        setBackendSubscription(data?.subscription ?? null);
+        if (data?.status === 'active' && data?.subscription) {
+          setBackendSubscription(data.subscription as BackendSubscription);
+        } else {
+          setBackendSubscription(null);
+        }
       } catch (error) {
         setBackendStatusError('No se pudo cargar el estado de suscripcion.');
       } finally {
@@ -122,8 +125,8 @@ export default function SubscriptionScreen() {
   }, [activeEntitlement, backendSubscription]);
 
   const statusLabel = useMemo(() => {
-    if (backendStatusLoading || isLoading) return 'CARGANDO ESTADO...';
-    if (backendStatusError || loadError) return 'NO SE PUDO CARGAR EL ESTADO';
+    if (isLoading || backendStatusLoading) return 'CARGANDO ESTADO...';
+    if (loadError && backendStatusError) return 'NO SE PUDO CARGAR EL ESTADO';
     if (backendSubscription) {
       return backendSubscription.state === 'active'
         ? 'SUSCRIPCION ACTIVA'
@@ -131,56 +134,33 @@ export default function SubscriptionScreen() {
     }
     if (activeEntitlement) return 'SUSCRIPCION ACTIVA';
     return 'NO TIENES UNA SUSCRIPCION ACTIVA';
-  }, [
-    activeEntitlement,
-    backendStatusError,
-    backendStatusLoading,
-    backendSubscription,
-    isLoading,
-    loadError,
-  ]);
+  }, [activeEntitlement, backendStatusError, backendStatusLoading, backendSubscription, isLoading, loadError]);
 
   const statusDetail = useMemo(() => {
-    console.log('Calculando statusDetail con:', {
-      activeEntitlement,
-      activeProductId,
-      backendSubscription,
-    });
     if (backendSubscription) {
       const endDate = backendSubscription.end_date || '';
       return endDate ? `Caduca: ${endDate}` : backendSubscription.name;
     }
+
     if (!activeEntitlement) return '';
     return activeProductId ?? activeEntitlement;
   }, [activeEntitlement, activeProductId, backendSubscription]);
 
   const registerSubscriptionInBackend = async (purchaseResult: any, selectedPackage: any, entitlementId: string | null) => {
-    console.log('=== REGISTRANDO SUSCRIPCIÓN EN BACKEND ===');
-    // console.log('purchaseResult:', JSON.stringify(purchaseResult, null, 2));
-    // console.log('selectedPackage:', JSON.stringify(selectedPackage, null, 2));
-    // console.log('entitlementId:', entitlementId);
-    // console.log('API_BASE_URL:', API_BASE_URL);
-    // console.log('=========================================');
-
     try {
-      console.log('------------ OBTENIENDO DATOS DE USUARIO PARA SUSCRIPCIÓN ------------');
       const userInfo = await AsyncStorage.getItem('user_information');
       const token = await AsyncStorage.getItem('token');
 
       if (!userInfo || !token) {
-        console.log('⚠️ No hay información de usuario o token');
         Alert.alert('Error', 'No se pudo obtener la información del usuario.');
         return;
       }
 
       const session = JSON.parse(userInfo);
       const userId = session.id || null;
-      console.log('User ID para suscripción:', userId);
 
       // Mapear el tipo de suscripción
       const subscriptionPeriod = selectedPackage?.product?.subscriptionPeriod || '';
-      console.log('subscriptionPeriod del producto:', subscriptionPeriod);
-      console.log('selectedPackage.packageType:', selectedPackage?.packageType);
       let subscriptionType = 'annual'; // por defecto
       
       if (subscriptionPeriod.includes('P1M') || selectedPackage?.packageType === 'MONTHLY') {
@@ -214,15 +194,6 @@ export default function SubscriptionScreen() {
         end_date: formattedEndDate,
       };
 
-      console.log({
-        userId,
-        subscriptionType,
-        startDate,
-        formattedEndDate,
-        paymentId,
-      });
-      console.log('📤 Datos a enviar al backend:', subscriptionData);
-
       const response = await fetch(`${API_BASE_URL}/renew_subscription`, {
         method: 'POST',
         headers: {
@@ -233,7 +204,6 @@ export default function SubscriptionScreen() {
       });
 
       const data = await response.json();
-      console.log('📥 Respuesta del backend:', data);
 
       if (!response.ok) {
         throw new Error(data?.error || data?.message || 'Error al registrar la suscripción');
@@ -241,51 +211,35 @@ export default function SubscriptionScreen() {
 
       Alert.alert('¡Listo!', data?.message || 'Tu suscripción quedó activa.');
     } catch (error: any) {
-      console.log('❌ Error al registrar en backend:', error);
       Alert.alert('Advertencia', 'La compra se realizó pero hubo un problema al registrarla: ' + (error?.message || 'Error desconocido'));
     }
   };
 
   const handlePurchase = async () => {
-    console.log('=== INICIO DE COMPRA ===');
-    console.log('selectedPackage:', JSON.stringify(selectedPackage, null, 2));
-    
     if (!selectedPackage) {
-      console.log('ERROR: No hay paquete seleccionado');
       Alert.alert('Plan requerido', 'Selecciona un plan para continuar.');
       return;
     }
 
     try {
-      console.log('Llamando a purchasePackage...');
       const purchaseResult = await Purchases.purchasePackage(selectedPackage);
-      console.log('✅ Purchase result:', JSON.stringify(purchaseResult, null, 2));
-      
       const customerInfo = purchaseResult.customerInfo ?? (await Purchases.getCustomerInfo());
-      console.log('✅ Customer info after purchase:', JSON.stringify(customerInfo, null, 2));
-      
       const activeKeys = Object.keys(customerInfo.entitlements.active ?? {});
-      console.log('✅ Active entitlements:', activeKeys);
-      
       const entitlementId = activeKeys.length > 0 ? activeKeys[0] : null;
-      console.log('✅ Active entitlement ID:', entitlementId);
       
       setActiveEntitlement(entitlementId);
       setActiveProductId(
         entitlementId ? customerInfo.entitlements.active[entitlementId]?.productIdentifier ?? null : null
       );
 
-      // Registrar la suscripción en el backend
-      console.log('📤 Enviando suscripción al backend...');
+      if (!entitlementId) {
+        Alert.alert('Compra pendiente', 'La compra no fue confirmada todavía. No se enviará al backend.');
+        return;
+      }
+
       await registerSubscriptionInBackend(purchaseResult, selectedPackage, entitlementId);
 
     } catch (error: any) {
-      console.log('❌ ERROR CAPTURADO:', error);
-      console.log('❌ Error type:', typeof error);
-      console.log('❌ Error keys:', Object.keys(error || {}));
-      console.log('❌ userCancelled:', error?.userCancelled);
-      console.log('❌ error.message:', error?.message);
-      console.log('❌ error.code:', error?.code);
       
       if (error?.userCancelled) {
         console.log('Usuario canceló la compra');
