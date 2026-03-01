@@ -3,6 +3,7 @@ import { Picker } from '@react-native-picker/picker';
 import React, { useEffect, useState } from 'react';
 import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 
 const API_BASE_URL = 'https://talkify.store/api';
 
@@ -53,7 +54,7 @@ export default function CardsScreen() {
       setContent('');
       setCategory('');
       setStatus('Activa');
-    } catch (error) {
+    } catch (error: any) {
       Toast.show({
         type: 'error',
         text1: 'Error al guardar la carta',
@@ -82,59 +83,66 @@ export default function CardsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.formCard}>
-        <Text style={styles.title}>Crear carta</Text>
-
-        <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Contenido</Text>
-          <TextInput
-            style={styles.textArea}
-            multiline
-            numberOfLines={5}
-            value={content}
-            onChangeText={setContent}
-            placeholder="Escribí el contenido de la carta..."
-            placeholderTextColor="#6E7B99"
-            textAlignVertical="top"
-          />
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <View style={styles.headerAccent} />
+          <Text style={styles.title}>Crear carta</Text>
         </View>
 
-        <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Categoría</Text>
-          <View style={styles.selectField}>
-            <Picker
-              selectedValue={category}
-              onValueChange={(value) => setCategory(String(value))}
-              style={styles.picker}
-              dropdownIconColor="#FFFFFF"
-              mode="dropdown"
-            >
-              <Picker.Item label="Seleccioná categoría" value="" color={pickerPlaceholderColor} />
-              {categories.map((item) => (
-                <Picker.Item key={item.id} label={item.name} value={String(item.id)} color={pickerOptionColor} />
-              ))}
-            </Picker>
+        <View style={styles.formCard}>
+          <Text style={styles.cardEyebrow}>NUEVA CARTA</Text>
+
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>Contenido</Text>
+            <TextInput
+              style={styles.textArea}
+              multiline
+              numberOfLines={5}
+              value={content}
+              onChangeText={setContent}
+              placeholder="Escribí el contenido de la carta..."
+              placeholderTextColor="#6E7B99"
+              textAlignVertical="top"
+            />
           </View>
-        </View>
 
-        <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Estado</Text>
-          <TouchableOpacity
-            style={styles.selectField}
-            activeOpacity={0.85}
-            onPress={() => setStatus((prev) => (prev === 'active' ? 'active' : 'active'))}
-          >
-            <Text style={styles.selectText}>{status}</Text>
-            <Ionicons name="chevron-down" size={18} color="#FFFFFF" />
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>Categoría</Text>
+            <View style={styles.selectField}>
+              <Picker
+                selectedValue={category}
+                onValueChange={(value) => setCategory(String(value))}
+                style={styles.picker}
+                dropdownIconColor="#FFFFFF"
+                mode="dropdown"
+              >
+                <Picker.Item label="Seleccioná categoría" value="" color={pickerPlaceholderColor} />
+                {categories.map((item) => (
+                  <Picker.Item key={item.id} label={item.name} value={String(item.id)} color={pickerOptionColor} />
+                ))}
+              </Picker>
+            </View>
+          </View>
+
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>Estado</Text>
+            <TouchableOpacity
+              style={styles.selectField}
+              activeOpacity={0.85}
+              onPress={() => setStatus((prev) => (prev === 'active' ? 'active' : 'active'))}
+            >
+              <Text style={styles.selectText}>{status}</Text>
+              <Ionicons name="chevron-down" size={18} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity 
+            style={styles.saveButton} 
+            activeOpacity={0.9}
+            onPress={saveCard}>
+            <Text style={styles.saveButtonText}>Guardar carta</Text>
           </TouchableOpacity>
         </View>
-
-        <TouchableOpacity 
-          style={styles.saveButton} 
-          activeOpacity={0.9}
-          onPress={saveCard}>
-          <Text style={styles.saveButtonText}>Guardar carta</Text>
-        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -144,56 +152,75 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#050A18',
-    paddingHorizontal: 16,
-    justifyContent: 'center',
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 40,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 20,
+  },
+  headerAccent: {
+    width: 6,
+    height: 28,
+    borderRadius: 999,
+    backgroundColor: '#8B5CF6',
   },
   formCard: {
-    backgroundColor: '#111735',
-    borderRadius: 24,
-    borderWidth: 3,
-    borderColor: '#2A4B9B',
-    paddingHorizontal: 20,
-    paddingVertical: 26,
-    shadowColor: '#5F2ADB',
+    backgroundColor: '#0F1733',
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#6D42D8',
+    padding: 20,
+    shadowColor: '#7C3AED',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.45,
-    shadowRadius: 20,
-    elevation: 16,
-    gap: 20,
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 14,
+    gap: 16,
   },
   title: {
     color: '#FFFFFF',
-    fontSize: 36,
+    fontSize: 22,
     fontWeight: '700',
-    marginBottom: 2,
+  },
+  cardEyebrow: {
+    color: '#9BA3B2',
+    fontSize: 12,
+    letterSpacing: 1.2,
+    fontWeight: '700',
   },
   fieldGroup: {
-    gap: 10,
+    gap: 8,
   },
   label: {
-    color: '#E6C8FF',
-    fontSize: 20,
+    color: '#FFFFFF',
+    fontSize: 14,
     fontWeight: '700',
   },
   textArea: {
-    minHeight: 160,
+    minHeight: 120,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#33507D',
-    backgroundColor: '#010A2C',
+    borderColor: '#6D42D8',
+    backgroundColor: '#0A1026',
     color: '#FFFFFF',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
     fontWeight: '500',
   },
   selectField: {
-    minHeight: 66,
+    minHeight: 44,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#33507D',
-    backgroundColor: '#010A2C',
-    paddingHorizontal: 16,
+    borderColor: '#6D42D8',
+    backgroundColor: '#0A1026',
+    paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -201,29 +228,26 @@ const styles = StyleSheet.create({
   picker: {
     flex: 1,
     color: '#FFFFFF',
-    marginHorizontal: -8,
+    marginHorizontal: -6,
   },
   selectText: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: '500',
   },
   saveButton: {
-    marginTop: 2,
-    minHeight: 68,
-    borderRadius: 16,
+    marginTop: 6,
+    minHeight: 44,
+    borderRadius: 12,
     backgroundColor: '#7C3AED',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#8B5CF6',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.75,
-    shadowRadius: 16,
-    elevation: 14,
   },
   saveButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
   },
 });
