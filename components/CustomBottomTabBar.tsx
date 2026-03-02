@@ -11,6 +11,13 @@ export default function CustomBottomTabBar() {
 
   const tabs = useMemo(() => [
     {
+      name: 'home',
+      route: '/',
+      icon: 'home-outline',
+      iconType: 'ionicons',
+      title: 'Home',
+    },
+    {
       name: 'play',
       route: '/play',
       icon: 'game-controller-outline',
@@ -41,6 +48,10 @@ export default function CustomBottomTabBar() {
   ], []);
 
   const isActive = (route: string) => {
+    if (route === '/') {
+      return pathname === '/' || pathname === '/(tabs)';
+    }
+
     return pathname === route || pathname.startsWith(route);
   };
 

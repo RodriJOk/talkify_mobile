@@ -41,6 +41,11 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
 
   const drawerItems = React.useMemo(() => [
     {
+      label: 'Home',
+      route: '/',
+      icon: 'home-outline',
+    },
+    {
       label: 'Jugar',
       route: '/play',
       icon: 'game-controller-outline',
@@ -69,7 +74,9 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
       <View style={{ flex: 1 }}>
         {drawerItems.map((item) => {
           // La pantalla está "enfocada" si la ruta actual (pathname) es la misma que la del item
-          const isFocused = pathname === item.route;
+          const isFocused = item.route === '/'
+            ? pathname === '/' || pathname === '/(tabs)'
+            : pathname === item.route;
 
           return (
             <DrawerItem
