@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
-import { Dimensions, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Modal, PanResponder, PanResponderGestureState, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
   Easing,
   runOnJS,
@@ -36,6 +36,8 @@ type WheelSegment = {
   label: string;
   color: string;
 };
+
+type SpinDirection = 'clockwise' | 'counterclockwise';
 
 type ResultModalState = {
   visible: boolean;
@@ -72,12 +74,14 @@ const WheelOfFortune = ({
   // Offset para que el primer segmento quede centrado arriba
   const visualOffset = -90 - anglePerSegment / 2;
 
-  const spinWheel = () => {
+  const spinWheel = (gestureBoost = 0, direction: SpinDirection = 'clockwise') => {
     if (isSpinning || disabled || numberOfSegments === 0) return;
     setIsSpinning(true);
 
     const randomIndex = Math.floor(Math.random() * numberOfSegments);
-    const extraSpins = (10 + Math.floor(Math.random() * 5)) * 360;
+    const baseSpins = 10 + Math.floor(Math.random() * 5);
+    const normalizedBoost = Math.max(0, Math.min(4, gestureBoost));
+    const extraSpins = (baseSpins + normalizedBoost) * 360;
     
     // Cálculo matemático para centrar el segmento elegido bajo el puntero
     const targetAngle = randomIndex * anglePerSegment + anglePerSegment / 2;
@@ -86,11 +90,23 @@ const WheelOfFortune = ({
     const currentRotation = rotation.value % 360;
     const normalizedCurrent = ((currentRotation % 360) + 360) % 360;
     const normalizedTarget = ((targetRotation % 360) + 360) % 360;
-    
-    let deltaToTarget = normalizedTarget - normalizedCurrent;
-    if (deltaToTarget < 0) deltaToTarget += 360;
-    
-    const totalRotation = rotation.value + extraSpins + deltaToTarget;
+
+    const clockwiseDelta = (() => {
+      let delta = normalizedTarget - normalizedCurrent;
+      if (delta < 0) delta += 360;
+      return delta;
+    })();
+
+    const counterClockwiseDelta = (() => {
+      let delta = normalizedCurrent - normalizedTarget;
+      if (delta < 0) delta += 360;
+      return delta;
+    })();
+
+    const totalRotation =
+      direction === 'clockwise'
+        ? rotation.value + extraSpins + clockwiseDelta
+        : rotation.value - (extraSpins + counterClockwiseDelta);
 
     rotation.value = withTiming(totalRotation, {
       duration: SPIN_DURATION,
@@ -106,6 +122,36 @@ const WheelOfFortune = ({
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${rotation.value}deg` }],
   }));
+
+  const spinFromGesture = (gestureState: PanResponderGestureState) => {
+    if (isSpinning || disabled || numberOfSegments === 0) return;
+
+    const velocity = Math.hypot(gestureState.vx, gestureState.vy);
+    const distance = Math.hypot(gestureState.dx, gestureState.dy);
+
+    if (distance < 18 && velocity < 0.12) return;
+
+    const gestureBoost = velocity * 2.8 + distance / 180;
+    const horizontalIntent = Math.abs(gestureState.dx) >= Math.abs(gestureState.vx)
+      ? gestureState.dx
+      : gestureState.vx;
+    const direction: SpinDirection = horizontalIntent >= 0 ? 'clockwise' : 'counterclockwise';
+
+    spinWheel(gestureBoost, direction);
+  };
+
+  const panResponder = PanResponder.create({
+    onStartShouldSetPanResponder: () => false,
+    onMoveShouldSetPanResponder: (_, gestureState) => {
+      return Math.abs(gestureState.dx) + Math.abs(gestureState.dy) > 8;
+    },
+    onPanResponderRelease: (_, gestureState) => {
+      spinFromGesture(gestureState);
+    },
+    onPanResponderTerminate: (_, gestureState) => {
+      spinFromGesture(gestureState);
+    },
+  });
 
   const makePath = (index: number) => {
     const startAngle = index * anglePerSegment;
@@ -129,7 +175,7 @@ const WheelOfFortune = ({
       {/* Brillos de fondo para efecto neón */}
       <View style={styles.neonOuterGlow} />
       
-      <Animated.View style={[styles.wheel, animatedStyle]}>
+      <Animated.View style={[styles.wheel, animatedStyle]} {...panResponder.panHandlers}>
         <Svg width={WHEEL_SIZE} height={WHEEL_SIZE} style={{ backgroundColor: 'transparent' }}>
           <G rotation={visualOffset} origin={`${RADIUS}, ${RADIUS}`}>
             {data.map((item, i) => (
@@ -165,7 +211,7 @@ const WheelOfFortune = ({
       {/* Puntero e Icono Central */}
       <View style={styles.pointer} />
       <TouchableOpacity 
-          onPress={spinWheel} 
+          onPress={() => spinWheel()} 
           disabled={isSpinning || disabled}
           activeOpacity={0.9} 
           style={styles.centerButton}>
