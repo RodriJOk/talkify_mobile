@@ -261,7 +261,7 @@ export default function HomeScreen() {
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.header}>
           <Image
-            source={require('@/assets/images/neon_icon_small.png')}
+            source={require('@/assets/images/neon_logo_transparente.png')}
             style={styles.userImage}
             resizeMode="contain"
           />
@@ -271,16 +271,34 @@ export default function HomeScreen() {
         </View>
         <View style={styles.menuContainer}>
           <MenuItem
-            icon={<Ionicons name="person-outline" size={24} color="#000" />}
+            icon={<Ionicons name="person-outline" size={24} color="#EAE9FF" />}
             title="Perfil"
             subtitle="Ajusta y cambia la configuración del perfil"
             onPress={() => handleNavigation('my_profile')}
           />
           <MenuItem
-            icon={<Ionicons name="calendar-outline" size={24} color="#000" />}
+            icon={<Ionicons name="calendar-outline" size={24} color="#EAE9FF" />}
             title="Jugar"
             subtitle="Gira la ruleta"
             onPress={() => handleNavigation('play')}
+          />
+          <MenuItem
+            icon={<Ionicons name="albums-outline" size={24} color="#EAE9FF" />}
+            title="Cartas"
+            subtitle="Crea y administra tus cartas"
+            onPress={() => handleNavigation('/new_cards')}
+          />
+          <MenuItem
+            icon={<Ionicons name="card-outline" size={24} color="#EAE9FF" />}
+            title="Suscripcion"
+            subtitle="Revisa tu plan actual"
+            onPress={() => handleNavigation('subscription')}
+          />
+          <MenuItem
+            icon={<Ionicons name="settings-outline" size={24} color="#EAE9FF" />}
+            title="Configuracion"
+            subtitle="Ajusta preferencias de la app"
+            onPress={() => handleNavigation('settings')}
           />
           <Toast />
         </View>
@@ -292,25 +310,32 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: '#eee',
+    backgroundColor: '#050A18',
     fontFamily: 'Poppins-Regular',
   },
   header: {
-    backgroundColor: '#fff',
+    backgroundColor: '#0F1733',
     alignItems: 'center',
     margin: 20,
     padding: 10,
-    borderRadius: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#6D42D8',
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    elevation: 10,
   },
   userImage: {
     padding: 0,
     margin: 0,
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
   },
   userNameText: {
-    color: '#000',
+    color: '#FFFFFF',
     fontSize: 20,
     textAlign: 'center',
     marginTop: 20,
@@ -354,19 +379,21 @@ const styles = StyleSheet.create({
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 10,
+    backgroundColor: '#0F1733',
+    borderRadius: 14,
     padding: 15,
     marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#6D42D8',
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        shadowColor: '#7C3AED',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.3,
+        shadowRadius: 12,
       },
       android: {
-        elevation: 3,
+        elevation: 8,
       },
     }),
   },
@@ -376,10 +403,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   menuItemIconContainer: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#121B3D',
     borderRadius: 10,
     padding: 10,
     marginRight: 15,
+    borderWidth: 1,
+    borderColor: '#5B36C9',
   },
   menuItemTextContainer: {
     flex: 1,
@@ -387,13 +416,14 @@ const styles = StyleSheet.create({
   menuItemTitle: {
     fontSize: 16,
     fontWeight: '600',
+  color: '#FFFFFF',
   },
   menuItemSubtitle: {
     fontSize: 12,
-    color: '#666',
+    color: '#A8B2D8',
   },
   menuItemCountContainer: {
-    backgroundColor: '#007aff',
+    backgroundColor: '#7C3AED',
     borderRadius: 15,
     minWidth: 30,
     height: 30,

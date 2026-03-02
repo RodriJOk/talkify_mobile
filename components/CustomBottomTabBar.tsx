@@ -19,7 +19,7 @@ export default function CustomBottomTabBar() {
     },
     {
       name: 'cards',
-      route: '/cards',
+      route: '/new_cards',
       icon: 'clone',
       iconType: 'fontawesome',
       title: 'Cartas',

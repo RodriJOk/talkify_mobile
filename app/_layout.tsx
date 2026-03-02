@@ -47,7 +47,7 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
     },
     {
       label: 'Cartas',
-      route: '/cards',
+      route: '/new_cards',
       icon: 'albums-outline',
     },
     {
@@ -178,6 +178,9 @@ export default function RootLayout() {
               title: 'Talkify'
             }}
           />
+          <Drawer.Screen name="new_cards" options={{ title: 'Cartas' }} />
+          <Drawer.Screen name="new_card_for_me" options={{ title: 'Carta para mí', drawerItemStyle: { display: 'none' } }} />
+          <Drawer.Screen name="new_card_for_game" options={{ title: 'Carta para el juego', drawerItemStyle: { display: 'none' } }} />
           <Drawer.Screen name="play" options={{ title: 'Jugar' }} />
           <Drawer.Screen name="cards" options={{ title: 'Cartas' }} />
           <Drawer.Screen name="subscription" options={{ title: 'Suscripcion' }} />
