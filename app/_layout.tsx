@@ -3,6 +3,7 @@ import { getRevenueCatConfig, hasKnownRevenueCatKeyPrefix } from '@/constants/re
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DrawerContentComponentProps, DrawerContentScrollView, DrawerItem } from '@react-navigation/drawer';
+import { BlurView } from 'expo-blur';
 import { useFonts } from 'expo-font';
 import { usePathname, useRouter } from 'expo-router';
 import { Drawer } from 'expo-router/drawer';
@@ -41,74 +42,81 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
   };
 
   const drawerItems = React.useMemo(() => [
-    {
-      label: 'Home',
-      route: '/',
-      icon: 'home-outline',
-    },
-    {
-      label: 'Jugar',
-      route: '/play',
-      icon: 'game-controller-outline',
-    },
-    {
-      label: 'Cartas',
-      route: '/new_cards',
-      icon: 'albums-outline',
-    },
-    {
-      label: 'Suscripcion',
-      route: '/subscription',
-      icon: 'card-outline',
-    },
-    {
-      label: 'Configuracion',
-      route: '/settings',
-      icon: 'settings-outline',
-    }
+    { label: 'Home', route: '/', icon: 'home-outline' },
+    { label: 'Jugar', route: '/play', icon: 'game-controller-outline' },
+    { label: 'Cartas', route: '/new_cards', icon: 'albums-outline' },
+    { label: 'Suscripcion', route: '/subscription', icon: 'card-outline' },
+    { label: 'Configuracion', route: '/settings', icon: 'settings-outline' }
   ], []);
 
   return (
-    <DrawerContentScrollView 
-      {...props} 
-      contentContainerStyle={{ flex: 1}}> 
-      <View style={{ flex: 1 }}>
-        {drawerItems.map((item) => {
-          // La pantalla está "enfocada" si la ruta actual (pathname) es la misma que la del item
-          const isFocused = item.route === '/'
-            ? pathname === '/' || pathname === '/(tabs)'
-            : pathname === item.route;
+    <View style={{ flex: 1 }}> 
+      <DrawerContentScrollView 
+        {...props} 
+        paddingTop={0}
+        contentContainerStyle={{ flexGrow: 1, paddingTop: 0 }}
+        bounces={false}
+        style={styles.drawerScroll}
+      > 
+        <View style={styles.drawerPanel}>
+          {/* Capas de fondo extendidas a la izquierda para evitar el corte */}
+          <BlurView
+            style={styles.drawerPanelBlur}
+            intensity={56}
+            tint="dark"
+            experimentalBlurMethod="dimezisBlurView"
+          />
+          <View style={styles.drawerPanelOverlay} />
+          <View style={styles.drawerPanelFogLayer} />
+          
+          <View style={styles.drawerItemsContainer}>
+            {drawerItems.map((item) => {
+              const isFocused = item.route === '/'
+                ? pathname === '/' || pathname === '/(tabs)'
+                : pathname === item.route;
 
-          return (
+              return (
+                <DrawerItem
+                  key={item.label}
+                  label={item.label}
+                  focused={isFocused}
+                  onPress={() => router.push(item.route as any)}
+                  labelStyle={styles.drawerLabel}
+                  style={styles.drawerItem}
+                  activeBackgroundColor="rgba(167, 139, 250, 0.24)"
+                  inactiveBackgroundColor="transparent"
+                  activeTintColor="#ffffff"
+                  inactiveTintColor="#F5F3FF"
+                  icon={({ color, size }) => (
+                    <Ionicons name={item.icon as any} size={size} color={color} />
+                  )}
+                />
+              );
+            })}
+          </View>
+
+          <View style={styles.logoutSection}>
             <DrawerItem
-              key={item.label}
-              label={item.label}
-              focused={isFocused}
-              onPress={() => router.push(item.route as any)}
-              labelStyle={styles.drawerLabel}
-              icon={({ color, size }) => (
-                <Ionicons name={item.icon as any} size={size} color={color} />
+              label="Cerrar Sesión"
+              labelStyle={styles.logoutLabel}
+              style={styles.logoutItem}
+              onPress={handleLogout}
+              activeBackgroundColor="rgba(252, 165, 165, 0.14)"
+              inactiveBackgroundColor="transparent"
+              activeTintColor="#FECACA"
+              inactiveTintColor="#FCA5A5"
+              icon={({ size }) => (
+                <Ionicons name="log-out-outline" size={size} color="#FCA5A5" />
               )}
             />
-          );
-        })}
-      </View>
-      <View style={[styles.logoutSection]}>
-        <DrawerItem
-          label="Cerrar Sesión"
-          labelStyle={styles.logoutLabel}
-          onPress={handleLogout}
-          icon={({ size }) => (
-            <Ionicons name="log-out-outline" size={size} color="#d9534f" />
-          )}
-        />
-      </View>
-    </DrawerContentScrollView>
+          </View>
+        </View>
+      </DrawerContentScrollView>
+    </View>
   );
 }
 
-
-// --- Layout Principal de la App (Drawer) ---
+// --- Layout Principal ---
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     'Poppins-Black': require('@/assets/fonts/Poppins-Black.ttf'),
@@ -119,95 +127,48 @@ export default function RootLayout() {
   });
 
   const pathname = usePathname();
-  
-  // Pantallas donde NO queremos mostrar el bottom tab bar
   const hideTabBarScreens = ['/singin', '/register', '/forget_password', '/terms_and_conditions'];
   const shouldShowTabBar = !hideTabBarScreens.some(screen => pathname.startsWith(screen));
 
-  // --- Configuración de RevenueCat (una sola vez al iniciar la app) ---
   useLayoutEffect(() => {
     const initRevenueCat = () => {
       try {
         Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
-
-        const { appEnv, isProduction, selectedApiKey, expectedKeyLabel } = getRevenueCatConfig();
-
-        if (!selectedApiKey) {
-          console.error(`[RevenueCat] No hay API key configurada para ${appEnv}. Revisá ${expectedKeyLabel}`);
-          return;
+        const { selectedApiKey } = getRevenueCatConfig();
+        if (selectedApiKey) {
+          Purchases.configure({ apiKey: selectedApiKey });
         }
-
-        if (!hasKnownRevenueCatKeyPrefix(selectedApiKey)) {
-          console.warn(
-            `[RevenueCat] Key con formato no esperado para ${appEnv}: recibió ${selectedApiKey.substring(0, 5)}...`
-          );
-        }
-
-        Purchases.configure({ apiKey: selectedApiKey });
-        console.log(
-          `[RevenueCat] ✅ Configurado para ${appEnv} (${Platform.OS}) con ${isProduction ? 'credenciales PROD' : 'credenciales TEST'} (${selectedApiKey.substring(0, 8)}...)`
-        );
       } catch (error: any) {
-        console.error('[RevenueCat] ❌ Error al inicializar:', error?.message || error);
+        console.error('[RevenueCat] Error:', error?.message);
       }
     };
-
     initRevenueCat();
   }, []);
 
-  if (!fontsLoaded) {
-    return null;
-  }
+  if (!fontsLoaded) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, backgroundColor: '#050A18' }}>
         <Drawer
           drawerContent={(props) => <CustomDrawerContent {...props} />}
           screenOptions={{
-            drawerStyle: { backgroundColor: '#fff' },
+            drawerStyle: { backgroundColor: 'transparent', width: '86%' },
+            overlayColor: 'rgba(2, 6, 23, 0.56)',
             headerStyle: { backgroundColor: '#000a23' },
             headerTintColor: '#fff',
-            drawerLabelStyle: { fontFamily: 'Poppins-Regular' }
           }}
         >
-          <Drawer.Screen
-            name="(tabs)"
-            options={{
-              title: 'Talkify'
-            }}
-          />
+          <Drawer.Screen name="(tabs)" options={{ title: 'Talkify' }} />
           <Drawer.Screen name="new_cards" options={{ title: 'Cartas' }} />
-          <Drawer.Screen name="new_card_for_me" options={{ title: 'Carta para mí', drawerItemStyle: { display: 'none' } }} />
-          <Drawer.Screen name="new_card_for_game" options={{ title: 'Carta para el juego', drawerItemStyle: { display: 'none' } }} />
           <Drawer.Screen name="play" options={{ title: 'Jugar' }} />
-          <Drawer.Screen name="cards" options={{ title: 'Cartas' }} />
           <Drawer.Screen name="subscription" options={{ title: 'Suscripcion' }} />
           <Drawer.Screen name="settings" options={{ title: 'Configuracion' }} />
           <Drawer.Screen name="singin" options={{ headerShown: false, drawerItemStyle: { display: 'none' } }} />
-          <Drawer.Screen name="forget_password" options={{ headerShown: false, drawerItemStyle: { display: 'none' } }} />
           <Drawer.Screen name="register" options={{ headerShown: false, drawerItemStyle: { display: 'none' } }} />
+          <Drawer.Screen name="forget_password" options={{ headerShown: false, drawerItemStyle: { display: 'none' } }} />
           <Drawer.Screen name="terms_and_conditions" options={{ headerShown: false, drawerItemStyle: { display: 'none' } }} />
-          <Drawer.Screen name="+not-found" options={{ drawerItemStyle: { display: 'none' } }} />
-          
-          {/* Ejemplo: Si 'my_professionals' no está en tabs, debe declararse aquí para que la navegación funcione */}
-          <Drawer.Screen name="my_professionals" options={{ title: 'Mis profesionales' }} />
-          <Drawer.Screen name="my_profile" options={{ title: 'Mi Perfil' }} />
-          <Drawer.Screen name="my_shift_reservations" options={{ title: 'Mis turnos' }} />
-          <Drawer.Screen name="my_clients" options={{ title: 'Mis clientes' }} />
-          <Drawer.Screen name="my_branches" options={{ title: 'Mis sucursales' }} />
-          <Drawer.Screen name="my_services" options={{ title: 'Mis servicios' }} />
-          <Drawer.Screen name="give_feedback" options={{ title: 'Dar feedback' }} />
-          <Drawer.Screen name="qr_code" options={{ title: 'Código QR' }} />
-          <Drawer.Screen name="my_coupons" options={{ title: 'Mis cupones' }} />
-          <Drawer.Screen name="new_shift_reservation_client" options={{ title: 'Pedir un turno' }} />
-
-          {/* Pantallas que se abren por navegación pero no se muestran en el drawer */}
-          <Drawer.Screen name="edit_branch/[id]" options={{ title: 'Editar Sucursal', drawerItemStyle: { display: 'none' } }} />
-          <Drawer.Screen name="subscription_plans" options={{ title: 'Planes de suscripción', drawerItemStyle: { display: 'none' } }} />
         </Drawer>
-        
-        {/* Mostrar la barra de navegación inferior en todas las pantallas excepto login */}
         {shouldShowTabBar && <CustomBottomTabBar />}
       </View>
       <Toast />
@@ -215,31 +176,75 @@ export default function RootLayout() {
   );
 }
 
-// --- Estilos ---
 const styles = StyleSheet.create({
+  drawerScroll: {
+    backgroundColor: 'transparent',
+    // Sacamos el scroll de la vista para que no se vea el inicio del borde
+    marginLeft: -50, 
+    paddingLeft: 20,
+  },
+  drawerPanel: {
+    flex: 1,
+    minHeight: '100%',
+    backgroundColor: 'rgba(66, 72, 104, 0.76)',
+    borderTopRightRadius: 28,
+    borderBottomRightRadius: 28,
+    overflow: 'hidden',
+    paddingTop: Platform.OS === 'ios' ? 60 : 50,
+    paddingBottom: 40,
+    // Compensamos el margen negativo para que los items respiren
+    paddingLeft: 25, 
+  },
+  drawerPanelBlur: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    right: 0,
+    left: -60, // Extendemos el desenfoque hacia la izquierda oculta
+  },
+  drawerPanelOverlay: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    right: 0,
+    left: -60,
+    backgroundColor: 'rgba(45, 53, 79, 0.30)',
+  },
+  drawerPanelFogLayer: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    right: 0,
+    left: -60,
+    backgroundColor: 'rgba(148, 163, 184, 0.05)',
+  },
+  drawerItemsContainer: {
+    flex: 1,
+    gap: 6,
+    paddingTop: 20,
+  },
+  drawerItem: {
+    borderRadius: 16,
+    marginRight: 10,
+    marginVertical: 4,
+  },
   drawerLabel: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 16,
-    color: '#333',
-    padding: 0,
-    margin: 0,
+    fontFamily: 'Poppins-Medium',
+    fontSize: 17,
+    color: '#F5F3FF',
   },
   logoutSection: {
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    paddingVertical: 5,
+    marginTop: 'auto',
+    paddingBottom: 4,
+    marginRight: 10,
+    marginBottom: 20,
+  },
+  logoutItem: {
+    borderRadius: 16,
   },
   logoutLabel: {
     fontFamily: 'Poppins-Medium',
     fontSize: 16,
-    color: '#d9534f',
-  },
-  versionContainer: {
-    padding: 16,
-    borderTopWidth: 0,
-  },
-  versionText: {
-    fontSize: 14,
-    color: '#888',
+    color: '#FCA5A5',
   },
 });
