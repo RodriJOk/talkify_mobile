@@ -1,8 +1,9 @@
+import { getRevenueCatConfig } from '@/constants/revenuecat';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Purchases from 'react-native-purchases';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -19,6 +20,13 @@ type BackendSubscription = {
   end_date: string;
 };
 
+type PaymentHistoryItem = {
+  productId: string;
+  purchaseDate: string;
+  expirationDate: string;
+  isActive: boolean;
+};
+
 export default function SubscriptionScreen() {
   const router = useRouter();
   const [plan, setPlan] = useState('');
@@ -32,12 +40,86 @@ export default function SubscriptionScreen() {
   const [backendSubscription, setBackendSubscription] = useState<BackendSubscription | null>(null);
   const [backendStatusLoading, setBackendStatusLoading] = useState(true);
   const [backendStatusError, setBackendStatusError] = useState('');
+  const [paymentHistory, setPaymentHistory] = useState<PaymentHistoryItem[]>([]);
+
+  const formatDateLabel = (isoDate: string) => {
+    if (!isoDate) return 'Sin fecha';
+    const date = new Date(isoDate);
+    if (Number.isNaN(date.getTime())) return isoDate;
+
+    return date.toLocaleDateString('es-AR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  };
+
+  const buildPaymentHistory = (customerInfo: any): PaymentHistoryItem[] => {
+    const purchaseDatesByProduct =
+      customerInfo?.allPurchaseDates ??
+      customerInfo?.allPurchaseDatesByProduct ??
+      {};
+    const expirationDatesByProduct =
+      customerInfo?.allExpirationDates ??
+      customerInfo?.allExpirationDatesByProduct ??
+      {};
+    const activeSubscriptions = new Set<string>(customerInfo?.activeSubscriptions ?? []);
+    const allPurchasedProductIdentifiers: string[] = customerInfo?.allPurchasedProductIdentifiers ?? [];
+
+    const productIds = Array.from(
+      new Set<string>([
+        ...Object.keys(purchaseDatesByProduct),
+        ...allPurchasedProductIdentifiers,
+      ])
+    );
+
+    return productIds
+      .map((productId) => ({
+        productId,
+        purchaseDate: String(purchaseDatesByProduct[productId] ?? ''),
+        expirationDate: String(expirationDatesByProduct[productId] ?? ''),
+        isActive: activeSubscriptions.has(productId),
+      }))
+      .sort((a, b) => new Date(b.purchaseDate).getTime() - new Date(a.purchaseDate).getTime());
+  };
+
+  const configureRevenueCatIfNeeded = async () => {
+    try {
+      const purchasesAny = Purchases as any;
+      if (typeof purchasesAny.isConfigured === 'function') {
+        const configured = await purchasesAny.isConfigured();
+        if (configured) return;
+      }
+
+      const { appEnv, selectedApiKey, expectedKeyLabel } = getRevenueCatConfig();
+
+      if (!selectedApiKey) {
+        throw new Error(`No hay API key de RevenueCat configurada para ${appEnv}. Revisá ${expectedKeyLabel}`);
+      }
+
+      Purchases.configure({ apiKey: selectedApiKey });
+      console.log('[RevenueCat][subscription] SDK configurado localmente para evitar condición de carrera.');
+    } catch (error: any) {
+      const errorMessage = String(error?.message ?? '').toLowerCase();
+
+      if (
+        errorMessage.includes('already configured') ||
+        errorMessage.includes('already configured instance')
+      ) {
+        return;
+      }
+
+      throw error;
+    }
+  };
 
   useEffect(() => {
     const loadRevenueCatData = async () => {
       try {
         setIsLoading(true);
         setLoadError('');
+
+        await configureRevenueCatIfNeeded();
 
         const offerings = await Purchases.getOfferings();
         const currentPackages = offerings.current?.availablePackages ?? [];
@@ -48,14 +130,18 @@ export default function SubscriptionScreen() {
         }
 
         const customerInfo = await Purchases.getCustomerInfo();
+        setPaymentHistory(buildPaymentHistory(customerInfo));
         const activeKeys = Object.keys(customerInfo.entitlements.active ?? {});
         const entitlementId = activeKeys.length > 0 ? activeKeys[0] : null;
         setActiveEntitlement(entitlementId);
         setActiveProductId(
           entitlementId ? customerInfo.entitlements.active[entitlementId]?.productIdentifier ?? null : null
         );
-      } catch (error) {
-        setLoadError('No se pudo cargar la informacion de suscripcion.');
+      } catch (error: any) {
+        const message = error?.message || 'No se pudo cargar la información de suscripción.';
+        const code = error?.code ? ` (${error.code})` : '';
+        setLoadError(`No se pudo cargar la información de suscripción. ${message}${code}`);
+        console.error('[RevenueCat][subscription] getCustomerInfo error:', error);
       } finally {
         setIsLoading(false);
       }
@@ -146,6 +232,8 @@ export default function SubscriptionScreen() {
     return activeProductId ?? activeEntitlement;
   }, [activeEntitlement, activeProductId, backendSubscription]);
 
+  const subscriptionStateText = isSubscriptionActive ? 'Activa' : 'Inactiva';
+
   const registerSubscriptionInBackend = async (purchaseResult: any, selectedPackage: any, entitlementId: string | null) => {
     try {
       const userInfo = await AsyncStorage.getItem('user_information');
@@ -224,6 +312,7 @@ export default function SubscriptionScreen() {
     try {
       const purchaseResult = await Purchases.purchasePackage(selectedPackage);
       const customerInfo = purchaseResult.customerInfo ?? (await Purchases.getCustomerInfo());
+      setPaymentHistory(buildPaymentHistory(customerInfo));
       const activeKeys = Object.keys(customerInfo.entitlements.active ?? {});
       const entitlementId = activeKeys.length > 0 ? activeKeys[0] : null;
       
@@ -255,7 +344,7 @@ export default function SubscriptionScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.card}>
           <Text style={styles.cardEyebrow}>ESTADO ACTUAL</Text>
           <View
@@ -274,6 +363,8 @@ export default function SubscriptionScreen() {
             </Text>
           </View>
           {!!statusDetail && <Text style={styles.statusDetail}>{statusDetail}</Text>}
+          <Text style={styles.subscriptionStateText}>Estado de suscripción: {subscriptionStateText}</Text>
+          {!!activeProductId && <Text style={styles.statusDetail}>Producto activo: {activeProductId}</Text>}
 
           <View style={styles.divider} />
 
@@ -323,7 +414,29 @@ export default function SubscriptionScreen() {
             </View>
           </View>
         </View>
-      </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardEyebrow}>PAGOS</Text>
+
+          <Text style={styles.historyInfoText}>
+            RevenueCat SDK muestra el estado más reciente por producto, no cada renovación individual.
+          </Text>
+
+          {paymentHistory.length === 0 ? (
+            <Text style={styles.historyEmptyText}>No hay compras registradas para esta cuenta.</Text>
+          ) : (
+            paymentHistory.map((item) => (
+              <View key={`${item.productId}-${item.purchaseDate}`} style={styles.historyItem}>
+                <Text style={styles.historyProduct}>{item.productId}</Text>
+                <Text style={styles.historyLine}>Compra registrada: {formatDateLabel(item.purchaseDate)}</Text>
+                <Text style={[styles.historyState, item.isActive ? styles.historyStateActive : styles.historyStateInactive]}>
+                  {item.isActive ? 'Activo' : 'No activo'}
+                </Text>
+              </View>
+            ))
+          )}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -334,9 +447,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#050A18',
   },
   content: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: 24,
     paddingTop: 40,
+    paddingBottom: 120,
+    gap: 16,
   },
   title: {
     color: '#FFFFFF',
@@ -457,5 +572,51 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '700',
+  },
+  subscriptionStateText: {
+    marginTop: 4,
+    color: '#D8B4FE',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  historyEmptyText: {
+    color: '#B3C0D9',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  historyInfoText: {
+    color: '#94A3B8',
+    fontSize: 12,
+    fontWeight: '500',
+    lineHeight: 18,
+  },
+  historyItem: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: 'rgba(10, 16, 38, 0.65)',
+    padding: 12,
+    gap: 4,
+  },
+  historyProduct: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  historyLine: {
+    color: '#C7D2FE',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  historyState: {
+    marginTop: 4,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  historyStateActive: {
+    color: '#34D399',
+  },
+  historyStateInactive: {
+    color: '#FF5C7A',
   },
 });

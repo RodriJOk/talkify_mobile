@@ -1,11 +1,12 @@
 import CustomBottomTabBar from '@/components/CustomBottomTabBar';
+import { getRevenueCatConfig, hasKnownRevenueCatKeyPrefix } from '@/constants/revenuecat';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DrawerContentComponentProps, DrawerContentScrollView, DrawerItem } from '@react-navigation/drawer';
 import { useFonts } from 'expo-font';
 import { usePathname, useRouter } from 'expo-router';
 import { Drawer } from 'expo-router/drawer';
-import React, { useEffect } from 'react';
+import React, { useLayoutEffect } from 'react';
 import { Alert, Platform, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Purchases, { LOG_LEVEL } from 'react-native-purchases';
@@ -124,37 +125,28 @@ export default function RootLayout() {
   const shouldShowTabBar = !hideTabBarScreens.some(screen => pathname.startsWith(screen));
 
   // --- Configuración de RevenueCat (una sola vez al iniciar la app) ---
-  useEffect(() => {
+  useLayoutEffect(() => {
     const initRevenueCat = () => {
       try {
         Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
 
-        const appEnv = 'production';
-
-        const iosApiKey = 'appl_mTpdbKsVxQhYewwMFpifOTIjhKO';
-
-        const androidApiKey = 'goog_BZzTuGaPdPVkvCZUpkXNyYPIeHd';
-
-        const selectedApiKey = Platform.OS === 'ios' ? iosApiKey : androidApiKey;
-
-        // Validar formato según entorno
-        const isValidKey = Platform.OS === 'ios'
-          ? selectedApiKey.startsWith('appl_')
-          : selectedApiKey.startsWith('goog_');
+        const { appEnv, isProduction, selectedApiKey, expectedKeyLabel } = getRevenueCatConfig();
 
         if (!selectedApiKey) {
-          console.error('[RevenueCat] No hay API key configurada');
+          console.error(`[RevenueCat] No hay API key configurada para ${appEnv}. Revisá ${expectedKeyLabel}`);
           return;
         }
 
-        if (!isValidKey) {
+        if (!hasKnownRevenueCatKeyPrefix(selectedApiKey)) {
           console.warn(
-            `[RevenueCat] Key sospechosa para ${appEnv}: esperaba ${Platform.OS === 'ios' ? 'appl_' : 'goog_'} pero recibió ${selectedApiKey.substring(0, 5)}...`
+            `[RevenueCat] Key con formato no esperado para ${appEnv}: recibió ${selectedApiKey.substring(0, 5)}...`
           );
         }
 
         Purchases.configure({ apiKey: selectedApiKey });
-        console.log(`[RevenueCat] ✅ Configurado para ${appEnv} (${Platform.OS}) con key ${selectedApiKey.substring(0, 8)}...`);
+        console.log(
+          `[RevenueCat] ✅ Configurado para ${appEnv} (${Platform.OS}) con ${isProduction ? 'credenciales PROD' : 'credenciales TEST'} (${selectedApiKey.substring(0, 8)}...)`
+        );
       } catch (error: any) {
         console.error('[RevenueCat] ❌ Error al inicializar:', error?.message || error);
       }

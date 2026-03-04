@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { getRevenueCatConfig } from '@/constants/revenuecat';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Purchases from 'react-native-purchases';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -18,55 +19,131 @@ export default function SubscriptionPlansScreen() {
   const [monthlyPlan, setMonthlyPlan] = useState<PackageItem | null>(null);
   const [annualPlan, setAnnualPlan] = useState<PackageItem | null>(null);
   const [loadError, setLoadError] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const loadPlans = async () => {
-      try {
-        setLoadError('');
-        const offerings = await Purchases.getOfferings();
-        const currentPackages = (offerings.current?.availablePackages ?? []) as PackageItem[];
+  const getRevenueCatErrorMessage = (error: unknown) => {
+    const err = error as any;
+    const code = err?.code ? String(err.code) : '';
+    const message = err?.message ? String(err.message) : 'Error desconocido al cargar planes.';
+    return code ? `${message} (${code})` : message;
+  };
 
-        const monthly = currentPackages.find((item) => {
-          const packageType = String(item.packageType ?? '').toUpperCase();
-          const period = String(item.product?.subscriptionPeriod ?? '').toUpperCase();
-          const title = String(item.product?.title ?? '').toLowerCase();
-          const identifier = String(item.identifier ?? '').toLowerCase();
+  const configureRevenueCatIfNeeded = async () => {
+    try {
+      const purchasesAny = Purchases as any;
+      if (typeof purchasesAny.isConfigured === 'function') {
+        const configured = await purchasesAny.isConfigured();
+        if (configured) return;
+      }
 
-          return (
-            packageType === 'MONTHLY' ||
-            period.includes('P1M') ||
-            title.includes('mes') ||
-            title.includes('monthly') ||
-            identifier.includes('month') ||
-            identifier.includes('mensual')
-          );
-        });
+      const { appEnv, selectedApiKey, expectedKeyLabel } = getRevenueCatConfig();
 
-        const annual = currentPackages.find((item) => {
-          const packageType = String(item.packageType ?? '').toUpperCase();
-          const period = String(item.product?.subscriptionPeriod ?? '').toUpperCase();
-          const title = String(item.product?.title ?? '').toLowerCase();
-          const identifier = String(item.identifier ?? '').toLowerCase();
+      if (!selectedApiKey) {
+        throw new Error(`No hay API key de RevenueCat configurada para ${appEnv}. Revisá ${expectedKeyLabel}`);
+      }
 
-          return (
-            packageType === 'ANNUAL' ||
-            period.includes('P1Y') ||
-            title.includes('anual') ||
-            title.includes('annual') ||
-            identifier.includes('year') ||
-            identifier.includes('anual')
-          );
-        });
+      Purchases.configure({ apiKey: selectedApiKey });
+      console.log('[RevenueCat][subscription_plans] SDK configurado localmente para evitar condición de carrera.');
+    } catch (error: any) {
+      const errorMessage = String(error?.message ?? '').toLowerCase();
+      if (
+        errorMessage.includes('already configured') ||
+        errorMessage.includes('already configured instance')
+      ) {
+        return;
+      }
 
-        setMonthlyPlan(monthly ?? null);
-        setAnnualPlan(annual ?? null);
-      } catch (error) {
+      throw error;
+    }
+  };
+
+  const fetchOfferingsWithRetry = async () => {
+    try {
+      return await Purchases.getOfferings();
+    } catch (firstError: any) {
+      const firstMessage = String(firstError?.message ?? '').toLowerCase();
+      const isPotentialInitRace = firstMessage.includes('configure') || firstMessage.includes('singleton');
+
+      if (!isPotentialInitRace) {
+        throw firstError;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 450));
+      return await Purchases.getOfferings();
+    }
+  };
+
+  const loadPlans = async () => {
+    try {
+      setIsLoading(true);
+      setLoadError('');
+
+      await configureRevenueCatIfNeeded();
+
+      const offerings = await fetchOfferingsWithRetry();
+      const currentOffering = offerings.current;
+      const currentPackages = (currentOffering?.availablePackages ?? []) as PackageItem[];
+
+      if (!currentOffering) {
         setMonthlyPlan(null);
         setAnnualPlan(null);
-        setLoadError('No se pudieron cargar los planes.');
+        setLoadError('RevenueCat no tiene un Offering actual configurado para esta app.');
+        return;
       }
-    };
 
+      if (currentPackages.length === 0) {
+        setMonthlyPlan(null);
+        setAnnualPlan(null);
+        setLoadError('No hay planes disponibles para este build/tienda en RevenueCat.');
+        return;
+      }
+
+      const monthly = currentPackages.find((item) => {
+        const packageType = String(item.packageType ?? '').toUpperCase();
+        const period = String(item.product?.subscriptionPeriod ?? '').toUpperCase();
+        const title = String(item.product?.title ?? '').toLowerCase();
+        const identifier = String(item.identifier ?? '').toLowerCase();
+
+        return (
+          packageType === 'MONTHLY' ||
+          period.includes('P1M') ||
+          title.includes('mes') ||
+          title.includes('monthly') ||
+          identifier.includes('month') ||
+          identifier.includes('mensual')
+        );
+      });
+
+      const annual = currentPackages.find((item) => {
+        const packageType = String(item.packageType ?? '').toUpperCase();
+        const period = String(item.product?.subscriptionPeriod ?? '').toUpperCase();
+        const title = String(item.product?.title ?? '').toLowerCase();
+        const identifier = String(item.identifier ?? '').toLowerCase();
+
+        return (
+          packageType === 'ANNUAL' ||
+          period.includes('P1Y') ||
+          title.includes('anual') ||
+          title.includes('annual') ||
+          identifier.includes('year') ||
+          identifier.includes('anual')
+        );
+      });
+
+      setMonthlyPlan(monthly ?? null);
+      setAnnualPlan(annual ?? null);
+    } catch (error) {
+      setMonthlyPlan(null);
+      setAnnualPlan(null);
+      const detailedError = getRevenueCatErrorMessage(error);
+      setLoadError(`No se pudieron cargar los planes. ${detailedError}`);
+      console.log('[RevenueCat][subscription_plans] getOfferings error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadPlans();
   }, []);
 
@@ -82,6 +159,16 @@ export default function SubscriptionPlansScreen() {
           <Text style={styles.cardEyebrow}>PLANES DISPONIBLES</Text>
 
           {!!loadError && <Text style={styles.errorText}>{loadError}</Text>}
+          {!!loadError && (
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={loadPlans}
+              activeOpacity={0.85}
+              disabled={isLoading}
+            >
+              <Text style={styles.retryText}>{isLoading ? 'Cargando...' : 'Reintentar'}</Text>
+            </TouchableOpacity>
+          )}
 
           {monthlyPlan ? (
             <View style={styles.planCard}>
@@ -172,6 +259,20 @@ const styles = StyleSheet.create({
     color: '#FF5C7A',
     fontSize: 13,
     fontWeight: '600',
+  },
+  retryButton: {
+    alignSelf: 'flex-start',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(196, 181, 253, 0.5)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(124, 58, 237, 0.15)',
+  },
+  retryText: {
+    color: '#C4B5FD',
+    fontSize: 12,
+    fontWeight: '700',
   },
   planCard: {
     borderRadius: 14,
