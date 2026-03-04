@@ -271,12 +271,6 @@ export default function HomeScreen() {
         </View>
         <View style={styles.menuContainer}>
           <MenuItem
-            icon={<Ionicons name="person-outline" size={24} color="#EAE9FF" />}
-            title="Perfil"
-            subtitle="Ajusta y cambia la configuración del perfil"
-            onPress={() => handleNavigation('my_profile')}
-          />
-          <MenuItem
             icon={<Ionicons name="calendar-outline" size={24} color="#EAE9FF" />}
             title="Jugar"
             subtitle="Gira la ruleta"
@@ -416,7 +410,7 @@ const styles = StyleSheet.create({
   menuItemTitle: {
     fontSize: 16,
     fontWeight: '600',
-  color: '#FFFFFF',
+    color: '#FFFFFF',
   },
   menuItemSubtitle: {
     fontSize: 12,
