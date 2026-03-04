@@ -168,6 +168,8 @@ export default function RootLayout() {
           <Drawer.Screen name="register" options={{ headerShown: false, drawerItemStyle: { display: 'none' } }} />
           <Drawer.Screen name="forget_password" options={{ headerShown: false, drawerItemStyle: { display: 'none' } }} />
           <Drawer.Screen name="terms_and_conditions" options={{ headerShown: false, drawerItemStyle: { display: 'none' } }} />
+          <Drawer.Screen name="new_card_for_me" options={{ title: 'Carta Personalizada' }} />
+          <Drawer.Screen name="new_card_for_game" options={{ title: 'Carta para el Juego' }} />
         </Drawer>
         {shouldShowTabBar && <CustomBottomTabBar />}
       </View>
