@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
@@ -15,20 +16,22 @@ type Category = {
 
 
 export default function NewCardForGame() {
+  const { t, i18n } = useTranslation();
+  const appLanguage = (i18n.resolvedLanguage || i18n.language || 'es').toLowerCase().startsWith('en') ? 'en' : 'es';
   const [content, setContent] = useState('');
     const [category, setCategory] = useState('');
-    const [status, setStatus] = useState('Activa');
+    const [status, setStatus] = useState('active');
     const [categories, setCategories] = useState<Category[]>([]);
     const pickerOptionColor = Platform.OS === 'android' ? '#111111' : '#FFFFFF';
     const pickerPlaceholderColor = Platform.OS === 'android' ? '#6B7280' : '#8EA0C1';
   
     const saveCard = async () => {
         if (!content.trim()) {
-          alert('El contenido de la carta no puede estar vacío.');
+          alert(t('cardsForm.emptyContent'));
           return;
         }
         if (!category) {
-          alert('Por favor, seleccioná una categoría para la carta.');
+          alert(t('cardsForm.missingCategory'));
           return;
         }
         console.log({
@@ -41,6 +44,8 @@ export default function NewCardForGame() {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              'Accept-Language': appLanguage,
+              'X-App-Language': appLanguage,
             },
             body: JSON.stringify({  
               content: content.trim(),
@@ -51,17 +56,17 @@ export default function NewCardForGame() {
           const data = await response.json();
           console.log('Respuesta de la API:', data);
           if (!response.ok) {
-            throw new Error(data?.message || 'No se pudo guardar la carta. Por favor, intentá nuevamente.');
+            throw new Error(data?.message || t('cardsForm.saveErrorFallback'));
           }
-          alert('Carta guardada exitosamente.');
+          alert(t('cardsForm.saveSuccess'));
           setContent('');
           setCategory('');
-          setStatus('Activa');
+          setStatus('active');
         } catch (error: any) {
           Toast.show({
             type: 'error',
-            text1: 'Error al guardar la carta',
-            text2: error.message || 'Ocurrió un error al guardar la carta. Por favor, intentá nuevamente.',
+            text1: t('cardsForm.saveErrorTitle'),
+            text2: error.message || t('cardsForm.saveErrorFallback'),
           });
         }
       }
@@ -69,10 +74,15 @@ export default function NewCardForGame() {
       useEffect(() => {
         const loadCategories = async () => {
           try {
-            const response = await fetch(`${API_BASE_URL}/get_categories`);
+            const response = await fetch(`${API_BASE_URL}/get_categories?lang=${appLanguage}`, {
+              headers: {
+                'Accept-Language': appLanguage,
+                'X-App-Language': appLanguage,
+              },
+            });
             const data = await response.json();
             if (!response.ok) {
-              throw new Error(data?.message || 'No se pudieron cargar las categorías.');
+              throw new Error(data?.message || t('cardsForm.categoriesLoadError'));
             }
     
             setCategories(Array.isArray(data?.categories) ? data.categories : []);
@@ -82,7 +92,7 @@ export default function NewCardForGame() {
         };
     
         loadCategories();
-      }, []);
+      }, [appLanguage, t]);
 
   const router = useRouter();
 
@@ -95,36 +105,36 @@ export default function NewCardForGame() {
       >
         <View style={styles.header}>
           <View style={styles.headerAccent} />
-          <Text style={styles.title}>Carta para el juego</Text>
+          <Text style={styles.title}>{t('newCardForGame.title')}</Text>
         </View>
 
         <View style={styles.card}>
           <Ionicons name="game-controller" size={46} color="#FFFFFF" />
-          <Text style={styles.cardTitle}>Modo juego</Text>
+          <Text style={styles.cardTitle}>{t('newCardForGame.modeTitle')}</Text>
           <Text style={styles.cardDescription}>
-            Aquí podrás crear una carta para agregarla al juego general.
+            {t('newCardForGame.modeDescription')}
           </Text>
         </View>
 
         <View style={styles.formCard}>
-          <Text style={styles.cardEyebrow}>NUEVA CARTA</Text>
+          <Text style={styles.cardEyebrow}>{t('cardsForm.newCard')}</Text>
 
           <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Contenido</Text>
+            <Text style={styles.label}>{t('cardsForm.content')}</Text>
             <TextInput
               style={styles.textArea}
               multiline
               numberOfLines={5}
               value={content}
               onChangeText={setContent}
-              placeholder="Escribí el contenido de la carta..."
+              placeholder={t('cardsForm.contentPlaceholder')}
               placeholderTextColor="#6E7B99"
               textAlignVertical="top"
             />
           </View>
 
           <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Categoría</Text>
+            <Text style={styles.label}>{t('cardsForm.category')}</Text>
             <View style={styles.selectField}>
               <Picker
                 selectedValue={category}
@@ -133,7 +143,7 @@ export default function NewCardForGame() {
                 dropdownIconColor="#FFFFFF"
                 mode="dropdown"
               >
-                <Picker.Item label="Seleccioná categoría" value="" color={pickerPlaceholderColor} />
+                <Picker.Item label={t('cardsForm.selectCategory')} value="" color={pickerPlaceholderColor} />
                 {categories.map((item) => (
                   <Picker.Item key={item.id} label={item.name} value={String(item.id)} color={pickerOptionColor} />
                 ))}
@@ -142,13 +152,13 @@ export default function NewCardForGame() {
           </View>
 
           <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Estado</Text>
+            <Text style={styles.label}>{t('cardsForm.state')}</Text>
             <TouchableOpacity
               style={styles.selectField}
               activeOpacity={0.85}
-              onPress={() => setStatus((prev) => (prev === 'active' ? 'active' : 'active'))}
+              onPress={() => setStatus('active')}
             >
-              <Text style={styles.selectText}>{status}</Text>
+              <Text style={styles.selectText}>{t('cardsForm.stateActive')}</Text>
               <Ionicons name="chevron-down" size={18} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
@@ -157,14 +167,14 @@ export default function NewCardForGame() {
             style={styles.saveButton} 
             activeOpacity={0.9}
             onPress={saveCard}>
-            <Text style={styles.saveButtonText}>Guardar carta</Text>
+            <Text style={styles.saveButtonText}>{t('cardsForm.saveCard')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
             style={styles.backButton} 
             onPress={() => router.back()}
             activeOpacity={0.85}>
-            <Text style={styles.backButtonText}>Volver</Text>
+            <Text style={styles.backButtonText}>{t('common.back')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

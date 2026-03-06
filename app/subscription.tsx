@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Purchases from 'react-native-purchases';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -29,6 +30,7 @@ type PaymentHistoryItem = {
 
 export default function SubscriptionScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [plan, setPlan] = useState('');
   const pickerOptionColor = Platform.OS === 'android' ? '#111111' : '#FFFFFF';
   const pickerPlaceholderColor = Platform.OS === 'android' ? '#6B7280' : '#8EA0C1';
@@ -43,7 +45,7 @@ export default function SubscriptionScreen() {
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistoryItem[]>([]);
 
   const formatDateLabel = (isoDate: string) => {
-    if (!isoDate) return 'Sin fecha';
+    if (!isoDate) return '-';
     const date = new Date(isoDate);
     if (Number.isNaN(date.getTime())) return isoDate;
 
@@ -94,7 +96,7 @@ export default function SubscriptionScreen() {
       const { appEnv, selectedApiKey, expectedKeyLabel } = getRevenueCatConfig();
 
       if (!selectedApiKey) {
-        throw new Error(`No hay API key de RevenueCat configurada para ${appEnv}. Revisá ${expectedKeyLabel}`);
+        throw new Error(t('subscription.appEnvApiKeyError', { appEnv, expectedKeyLabel }));
       }
 
       Purchases.configure({ apiKey: selectedApiKey });
@@ -138,9 +140,9 @@ export default function SubscriptionScreen() {
           entitlementId ? customerInfo.entitlements.active[entitlementId]?.productIdentifier ?? null : null
         );
       } catch (error: any) {
-        const message = error?.message || 'No se pudo cargar la información de suscripción.';
+        const message = error?.message || t('subscription.loadInfoError');
         const code = error?.code ? ` (${error.code})` : '';
-        setLoadError(`No se pudo cargar la información de suscripción. ${message}${code}`);
+        setLoadError(`${t('subscription.loadInfoError')} ${message}${code}`);
         console.error('[RevenueCat][subscription] getCustomerInfo error:', error);
       } finally {
         setIsLoading(false);
@@ -148,7 +150,7 @@ export default function SubscriptionScreen() {
     };
 
     loadRevenueCatData();
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     const loadBackendStatus = async () => {
@@ -166,7 +168,7 @@ export default function SubscriptionScreen() {
         const resolvedUserId = String(storedUserId || parsedUser?.id || '').trim();
 
         if (!resolvedUserId) {
-          setBackendStatusError('No se pudo obtener el usuario.');
+          setBackendStatusError(t('subscription.userMissing'));
           return;
         }
 
@@ -180,7 +182,7 @@ export default function SubscriptionScreen() {
 
         const data = await response.json();
         if (!response.ok) {
-          throw new Error(data?.message || data?.error || 'No se pudo cargar el estado de suscripcion.');
+          throw new Error(data?.message || data?.error || t('subscription.backendStatusFetchError'));
         }
 
         if (data?.status === 'active' && data?.subscription) {
@@ -189,14 +191,14 @@ export default function SubscriptionScreen() {
           setBackendSubscription(null);
         }
       } catch (error) {
-        setBackendStatusError('No se pudo cargar el estado de suscripcion.');
+        setBackendStatusError(t('subscription.backendStatusError'));
       } finally {
         setBackendStatusLoading(false);
       }
     };
 
     loadBackendStatus();
-  }, []);
+  }, [t]);
 
   const selectedPackage = useMemo(
     () => packages.find((item) => String(item.identifier) === String(plan)),
@@ -211,28 +213,28 @@ export default function SubscriptionScreen() {
   }, [activeEntitlement, backendSubscription]);
 
   const statusLabel = useMemo(() => {
-    if (isLoading || backendStatusLoading) return 'CARGANDO ESTADO...';
-    if (loadError && backendStatusError) return 'NO SE PUDO CARGAR EL ESTADO';
+    if (isLoading || backendStatusLoading) return t('subscription.loadingStatus');
+    if (loadError && backendStatusError) return t('subscription.statusLoadError');
     if (backendSubscription) {
       return backendSubscription.state === 'active'
-        ? 'SUSCRIPCION ACTIVA'
-        : 'NO TIENES UNA SUSCRIPCION ACTIVA';
+        ? t('subscription.activeStatus')
+        : t('subscription.inactiveStatus');
     }
-    if (activeEntitlement) return 'SUSCRIPCION ACTIVA';
-    return 'NO TIENES UNA SUSCRIPCION ACTIVA';
-  }, [activeEntitlement, backendStatusError, backendStatusLoading, backendSubscription, isLoading, loadError]);
+    if (activeEntitlement) return t('subscription.activeStatus');
+    return t('subscription.inactiveStatus');
+  }, [activeEntitlement, backendStatusError, backendStatusLoading, backendSubscription, isLoading, loadError, t]);
 
   const statusDetail = useMemo(() => {
     if (backendSubscription) {
       const endDate = backendSubscription.end_date || '';
-      return endDate ? `Caduca: ${endDate}` : backendSubscription.name;
+      return endDate ? t('subscription.expiresOn', { date: endDate }) : backendSubscription.name;
     }
 
     if (!activeEntitlement) return '';
     return activeProductId ?? activeEntitlement;
   }, [activeEntitlement, activeProductId, backendSubscription]);
 
-  const subscriptionStateText = isSubscriptionActive ? 'Activa' : 'Inactiva';
+  const subscriptionStateText = isSubscriptionActive ? t('subscription.activeState') : t('subscription.inactiveState');
 
   const registerSubscriptionInBackend = async (purchaseResult: any, selectedPackage: any, entitlementId: string | null) => {
     try {
@@ -240,7 +242,7 @@ export default function SubscriptionScreen() {
       const token = await AsyncStorage.getItem('token');
 
       if (!userInfo || !token) {
-        Alert.alert('Error', 'No se pudo obtener la información del usuario.');
+        Alert.alert(t('common.error'), t('subscription.userInfoError'));
         return;
       }
 
@@ -273,7 +275,7 @@ export default function SubscriptionScreen() {
         || Date.now(); // Fallback temporal
 
       const subscriptionData = {
-        name: selectedPackage?.product?.title || 'Suscripción',
+        name: selectedPackage?.product?.title || t('subscription.subscriptionNameFallback'),
         type: subscriptionType,
         state: 'active',
         payment_id: String(paymentId),
@@ -294,18 +296,18 @@ export default function SubscriptionScreen() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.error || data?.message || 'Error al registrar la suscripción');
+        throw new Error(data?.error || data?.message || t('subscription.backendRegisterError'));
       }
 
-      Alert.alert('¡Listo!', data?.message || 'Tu suscripción quedó activa.');
+      Alert.alert(t('subscription.purchaseRegistered'), data?.message || t('subscription.purchaseRegisteredMessage'));
     } catch (error: any) {
-      Alert.alert('Advertencia', 'La compra se realizó pero hubo un problema al registrarla: ' + (error?.message || 'Error desconocido'));
+      Alert.alert(t('subscription.registerWarningTitle'), t('subscription.registerWarningMessage', { message: error?.message || t('common.error') }));
     }
   };
 
   const handlePurchase = async () => {
     if (!selectedPackage) {
-      Alert.alert('Plan requerido', 'Selecciona un plan para continuar.');
+      Alert.alert(t('subscription.planRequiredTitle'), t('subscription.planRequiredMessage'));
       return;
     }
 
@@ -322,7 +324,7 @@ export default function SubscriptionScreen() {
       );
 
       if (!entitlementId) {
-        Alert.alert('Compra pendiente', 'La compra no fue confirmada todavía. No se enviará al backend.');
+        Alert.alert(t('subscription.pendingTitle'), t('subscription.pendingMessage'));
         return;
       }
 
@@ -332,13 +334,13 @@ export default function SubscriptionScreen() {
       
       if (error?.userCancelled) {
         console.log('Usuario canceló la compra');
-        Alert.alert('Cancelado', 'Has cancelado la compra.');
+        Alert.alert(t('subscription.canceledTitle'), t('subscription.canceledMessage'));
         return;
       }
       
-      const errorMessage = error?.message || error?.code || 'No se pudo completar la compra.';
+      const errorMessage = error?.message || error?.code || t('subscription.purchaseErrorFallback');
       console.log('Purchase error completo:', JSON.stringify(error, null, 2));
-      Alert.alert('Error', errorMessage);
+      Alert.alert(t('common.error'), errorMessage);
     }
   };
 
@@ -346,7 +348,7 @@ export default function SubscriptionScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.card}>
-          <Text style={styles.cardEyebrow}>ESTADO ACTUAL</Text>
+          <Text style={styles.cardEyebrow}>{t('subscription.currentStatus')}</Text>
           <View
             style={[
               styles.statusPill,
@@ -363,8 +365,8 @@ export default function SubscriptionScreen() {
             </Text>
           </View>
           {!!statusDetail && <Text style={styles.statusDetail}>{statusDetail}</Text>}
-          <Text style={styles.subscriptionStateText}>Estado de suscripción: {subscriptionStateText}</Text>
-          {!!activeProductId && <Text style={styles.statusDetail}>Producto activo: {activeProductId}</Text>}
+          <Text style={styles.subscriptionStateText}>{t('subscription.stateLabel', { state: subscriptionStateText })}</Text>
+          {!!activeProductId && <Text style={styles.statusDetail}>{t('subscription.activeProduct', { product: activeProductId })}</Text>}
 
           <View style={styles.divider} />
 
@@ -377,9 +379,9 @@ export default function SubscriptionScreen() {
                 dropdownIconColor="#FFFFFF"
                 mode="dropdown"
               >
-                <Picker.Item label="Selecciona un plan" value="" color={pickerPlaceholderColor} />
+                <Picker.Item label={t('subscription.selectPlan')} value="" color={pickerPlaceholderColor} />
                 {packages.map((item) => {
-                  const title = item?.product?.title ?? 'Plan';
+                  const title = item?.product?.title ?? t('subscription.planFallback');
                   const price = item?.product?.priceString ?? '';
                   const label = price ? `${title} (${price})` : title;
                   return (
@@ -400,7 +402,7 @@ export default function SubscriptionScreen() {
                 activeOpacity={0.9}
                 onPress={() => router.push('/subscription_plans')}
               >
-                <Text style={styles.secondaryText}>Ver planes</Text>
+                <Text style={styles.secondaryText}>{t('subscription.viewPlans')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -409,28 +411,28 @@ export default function SubscriptionScreen() {
                 onPress={handlePurchase}
                 disabled={!selectedPackage || isLoading}
               >
-                <Text style={styles.ctaText}>Pagar</Text>
+                <Text style={styles.ctaText}>{t('subscription.pay')}</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardEyebrow}>PAGOS</Text>
+          <Text style={styles.cardEyebrow}>{t('subscription.payments')}</Text>
 
           <Text style={styles.historyInfoText}>
-            RevenueCat SDK muestra el estado más reciente por producto, no cada renovación individual.
+            {t('subscription.paymentHistoryInfo')}
           </Text>
 
           {paymentHistory.length === 0 ? (
-            <Text style={styles.historyEmptyText}>No hay compras registradas para esta cuenta.</Text>
+            <Text style={styles.historyEmptyText}>{t('subscription.noPurchases')}</Text>
           ) : (
             paymentHistory.map((item) => (
               <View key={`${item.productId}-${item.purchaseDate}`} style={styles.historyItem}>
                 <Text style={styles.historyProduct}>{item.productId}</Text>
-                <Text style={styles.historyLine}>Compra registrada: {formatDateLabel(item.purchaseDate)}</Text>
+                <Text style={styles.historyLine}>{t('subscription.purchaseDate', { date: formatDateLabel(item.purchaseDate) })}</Text>
                 <Text style={[styles.historyState, item.isActive ? styles.historyStateActive : styles.historyStateInactive]}>
-                  {item.isActive ? 'Activo' : 'No activo'}
+                  {item.isActive ? t('subscription.active') : t('subscription.inactive')}
                 </Text>
               </View>
             ))

@@ -3,25 +3,27 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Toast from 'react-native-toast-message';
 
 
 export default function SingIn() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   
   const handleLogin = async () => {
     if (!email || !password) {
-      setError('Por favor, completa todos los campos.');
+      setError(t('signin.fillAllFields'));
       return;
     }
     
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      setError('Por favor, ingresa un correo electrónico válido.');
+      setError(t('signin.invalidEmail'));
       return;
     }
     
@@ -53,12 +55,12 @@ export default function SingIn() {
       // "updated_at": "2026-02-15T12:56:43.000000Z"}
 
       if (!response.ok) {
-        throw new Error(data.message || 'Error al iniciar sesión');
+        throw new Error(data.message || t('signin.loginErrorFallback'));
       }
 
       Toast.show({
         type: 'success',
-        text1: '¡Login exitoso!',
+        text1: t('signin.loginSuccess'),
       });
 
       await AsyncStorage.setItem('user_information', JSON.stringify(data?.user ?? {}));
@@ -72,7 +74,7 @@ export default function SingIn() {
       if (err instanceof Error) {
         setError(err.message);
       } else {
-        setError('Ocurrió un error desconocido.');
+        setError(t('signin.unknownError'));
       }
     }
   };
@@ -89,7 +91,7 @@ export default function SingIn() {
     if (error) {
       Toast.show({
         type: 'error',
-        text1: 'Error',
+        text1: t('common.error'),
         text2: error,
         visibilityTime: 3000,
         position: 'top',
@@ -106,12 +108,12 @@ export default function SingIn() {
                 style={styles.logoHeader}
             />
             <Text style={ styles.headerText }>
-                Ingresa tus credenciales
+              {t('signin.header')}
             </Text>
             <View style= {{marginBottom: 24}}>
-                <Text style={styles.label}>Correo electrónico</Text>
+              <Text style={styles.label}>{t('signin.emailLabel')}</Text>
                 <TextInput
-                    placeholder="Correo electrónico"
+                placeholder={t('signin.emailPlaceholder')}
                     value={email}
                     onChangeText={setEmail}
                     style={styles.input}
@@ -120,9 +122,9 @@ export default function SingIn() {
                 />
             </View>
             <View style= {{marginBottom: 24}}>
-                <Text style={styles.label}>Contraseña</Text>
+              <Text style={styles.label}>{t('signin.passwordLabel')}</Text>
                 <TextInput
-                    placeholder="Contraseña"
+                placeholder={t('signin.passwordPlaceholder')}
                     value={password}
                     onChangeText={setPassword}
                     style={[styles.input, { color: '#000' }]}
@@ -130,13 +132,13 @@ export default function SingIn() {
                 />
             </View>
             <TouchableOpacity style={styles.forgetPasswordLink} onPress={goToResetPassword}>
-                <Text style={styles.link}>¿Olvidaste tu contraseña?</Text>
+              <Text style={styles.link}>{t('signin.forgotPassword')}</Text>
             </TouchableOpacity>
             <View style={styles.container_buttons_CTA}>
                 <TouchableOpacity 
                     style={styles.button} 
                     onPress={goToRegister}>
-                    <Text style={styles.buttonText}>Registrarse</Text>
+                <Text style={styles.buttonText}>{t('signin.register')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
                     style={styles.loginButton} 
@@ -147,7 +149,7 @@ export default function SingIn() {
                       end={{ x: 1, y: 0.5 }}
                       style={styles.loginButtonGradient}
                     >
-                      <Text style={styles.buttonText}>Ingresar</Text>
+                      <Text style={styles.buttonText}>{t('signin.login')}</Text>
                     </LinearGradient>
                 </TouchableOpacity>
             </View>

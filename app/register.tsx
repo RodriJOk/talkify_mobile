@@ -2,12 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import Toast from 'react-native-toast-message';
 
 export default function SingIn() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   const [phoneNumber, setPhoneNumber] = useState("");
   const [roles, setRoles] = useState<Array<{ id: number; name: string }>>([]);
@@ -25,7 +27,7 @@ export default function SingIn() {
     if (!name || !surname || !email || !password) {
       Toast.show({
         type: 'error',
-        text1: 'Por favor, completa todos los campos.',
+        text1: t('register.fillAllFields'),
       });
       return;
     }
@@ -33,7 +35,7 @@ export default function SingIn() {
     if (!name || name.length < 2) {
       Toast.show({
         type: 'error',
-        text1: 'El nombre debe tener al menos 2 caracteres.',
+        text1: t('register.invalidName'),
       });
       return;
     }
@@ -41,7 +43,7 @@ export default function SingIn() {
     if (!surname || surname.length < 2) {
       Toast.show({
         type: 'error',
-        text1: 'El apellido debe tener al menos 2 caracteres.',
+        text1: t('register.invalidSurname'),
       });
       return;
     }
@@ -50,7 +52,7 @@ export default function SingIn() {
     if (!emailRegex.test(email)) {
       Toast.show({
         type: 'error',
-        text1: 'Por favor, ingresa un correo electrónico válido.',
+        text1: t('register.invalidEmail'),
       });
       return;
     }
@@ -58,7 +60,7 @@ export default function SingIn() {
     if (!aceptTerms) {
       Toast.show({
         type: 'error',
-        text1: 'Debes aceptar los términos y condiciones.',
+        text1: t('register.mustAcceptTerms'),
       });
       return;
     }
@@ -67,8 +69,8 @@ export default function SingIn() {
     if (!passwordRegex.test(password)) {
       Toast.show({
         type: 'error',
-        text1: 'La contraseña debe tener al menos: ',
-        text2: '8 caracteres, una mayúscula, un número y un carácter especial.',
+        text1: t('register.invalidPasswordLine1'),
+        text2: t('register.invalidPasswordLine2'),
       });
       return;
     }
@@ -102,15 +104,15 @@ export default function SingIn() {
       if (!response.ok) {
         Toast.show({
           type: 'error',
-          text1: 'Error al crear el usuario.',
+          text1: t('register.createUserError'),
         });
-        throw new Error(data.message || 'Error al iniciar sesión');
+        throw new Error(data.message || t('register.registerErrorFallback'));
       }
 
       // Redirigir o guardar estado
       Toast.show({
         type: 'success',
-        text1: '¡Registro exitoso!',
+        text1: t('register.registerSuccess'),
       });
 
       setTimeout(() => {
@@ -120,7 +122,7 @@ export default function SingIn() {
     } catch (err: any) {
       Toast.show({
         type: 'error',
-        text1: 'Error al crear el usuario.',
+        text1: t('register.createUserError'),
       });
 
       setError(err.message);
@@ -139,12 +141,12 @@ export default function SingIn() {
     <ScrollView contentContainerStyle={styles.scrollContent}>
       <View style={styles.container}>
           <Text style={ styles.headerText }>
-              Registrate
+              {t('register.title')}
           </Text>
           <View style={styles.containerInput}>
-            <Text style={styles.label}>Nombre</Text>
+            <Text style={styles.label}>{t('register.nameLabel')}</Text>
             <TextInput
-                placeholder="Nombre"
+                placeholder={t('register.namePlaceholder')}
                 value={name}
                 onChangeText={setName}
                 style={styles.input}
@@ -153,9 +155,9 @@ export default function SingIn() {
             />
           </View>
           <View style={styles.containerInput}>
-            <Text style={styles.label}>Apellido</Text>
+            <Text style={styles.label}>{t('register.surnameLabel')}</Text>
             <TextInput
-              placeholder="Apellido"
+              placeholder={t('register.surnamePlaceholder')}
               value={surname}
               onChangeText={setSurname}
               style={styles.input}
@@ -164,9 +166,9 @@ export default function SingIn() {
           />
           </View>
           <View style={styles.containerInput}>
-            <Text style={styles.label}>Correo electrónico</Text>
+            <Text style={styles.label}>{t('register.emailLabel')}</Text>
             <TextInput
-              placeholder="Correo electrónico"
+              placeholder={t('register.emailPlaceholder')}
               value={email}
               onChangeText={setEmail}
               style={styles.input}
@@ -175,10 +177,10 @@ export default function SingIn() {
           />
           </View>
           <View style={styles.containerInput}>
-            <Text style={styles.label}>Contraseña</Text>
+            <Text style={styles.label}>{t('register.passwordLabel')}</Text>
             <View style={{ position: "relative" }}>
               <TextInput
-                placeholder="Contraseña"
+                placeholder={t('register.passwordPlaceholder')}
                 value={password}
                 onChangeText={setPassword}
                 style={[styles.input]} // espacio para el icono
@@ -204,17 +206,17 @@ export default function SingIn() {
                 trackColor={{ false: '#ccc', true: '#80bdff' }}
               />
               <Text style={[styles.label, { marginLeft: 8 }]}>
-                  Acepto los{' '}
+                  {t('register.acceptTermsPrefix')}
                   <Text
                       style={{ color: '#007BFF', textDecorationLine: 'underline' }}
                       onPress={handleTermsAndConditions}>
-                  términos y condiciones
+                  {t('register.acceptTermsLink')}
                   </Text>
               </Text>
           </View>
           <View style={styles.container_buttons_CTA}>
             <TouchableOpacity style={styles.backButton} onPress={goBack}>
-              <Text style={styles.buttonText}>Volver</Text>
+              <Text style={styles.buttonText}>{t('common.back')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.button} onPress={handleRegister}>
@@ -224,7 +226,7 @@ export default function SingIn() {
                 end={{ x: 1, y: 0.5 }}
                 style={styles.buttonGradient}
               >
-                <Text style={styles.buttonText}>Crear Usuario</Text>
+                <Text style={styles.buttonText}>{t('register.createUser')}</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>

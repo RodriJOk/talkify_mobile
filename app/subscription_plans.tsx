@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
 import { getRevenueCatConfig } from '@/constants/revenuecat';
+import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Purchases from 'react-native-purchases';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,6 +17,7 @@ type PackageItem = {
 };
 
 export default function SubscriptionPlansScreen() {
+  const { t } = useTranslation();
   const [monthlyPlan, setMonthlyPlan] = useState<PackageItem | null>(null);
   const [annualPlan, setAnnualPlan] = useState<PackageItem | null>(null);
   const [loadError, setLoadError] = useState('');
@@ -24,7 +26,7 @@ export default function SubscriptionPlansScreen() {
   const getRevenueCatErrorMessage = (error: unknown) => {
     const err = error as any;
     const code = err?.code ? String(err.code) : '';
-    const message = err?.message ? String(err.message) : 'Error desconocido al cargar planes.';
+    const message = err?.message ? String(err.message) : t('subscriptionPlans.loadingUnknownError');
     return code ? `${message} (${code})` : message;
   };
 
@@ -39,7 +41,7 @@ export default function SubscriptionPlansScreen() {
       const { appEnv, selectedApiKey, expectedKeyLabel } = getRevenueCatConfig();
 
       if (!selectedApiKey) {
-        throw new Error(`No hay API key de RevenueCat configurada para ${appEnv}. Revisá ${expectedKeyLabel}`);
+        throw new Error(t('subscriptionPlans.missingApiKey', { appEnv, expectedKeyLabel }));
       }
 
       Purchases.configure({ apiKey: selectedApiKey });
@@ -87,14 +89,14 @@ export default function SubscriptionPlansScreen() {
       if (!currentOffering) {
         setMonthlyPlan(null);
         setAnnualPlan(null);
-        setLoadError('RevenueCat no tiene un Offering actual configurado para esta app.');
+        setLoadError(t('subscriptionPlans.noOffering'));
         return;
       }
 
       if (currentPackages.length === 0) {
         setMonthlyPlan(null);
         setAnnualPlan(null);
-        setLoadError('No hay planes disponibles para este build/tienda en RevenueCat.');
+        setLoadError(t('subscriptionPlans.noPlansForBuild'));
         return;
       }
 
@@ -136,7 +138,7 @@ export default function SubscriptionPlansScreen() {
       setMonthlyPlan(null);
       setAnnualPlan(null);
       const detailedError = getRevenueCatErrorMessage(error);
-      setLoadError(`No se pudieron cargar los planes. ${detailedError}`);
+      setLoadError(t('subscriptionPlans.loadPlansError', { detail: detailedError }));
       console.log('[RevenueCat][subscription_plans] getOfferings error:', error);
     } finally {
       setIsLoading(false);
@@ -152,11 +154,11 @@ export default function SubscriptionPlansScreen() {
       <View style={styles.content}>
         <View style={styles.header}>
           <View style={styles.headerAccent} />
-          <Text style={styles.title}>Planes disponibles</Text>
+          <Text style={styles.title}>{t('subscriptionPlans.title')}</Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardEyebrow}>PLANES DISPONIBLES</Text>
+          <Text style={styles.cardEyebrow}>{t('subscriptionPlans.cardTitle')}</Text>
 
           {!!loadError && <Text style={styles.errorText}>{loadError}</Text>}
           {!!loadError && (
@@ -166,41 +168,41 @@ export default function SubscriptionPlansScreen() {
               activeOpacity={0.85}
               disabled={isLoading}
             >
-              <Text style={styles.retryText}>{isLoading ? 'Cargando...' : 'Reintentar'}</Text>
+              <Text style={styles.retryText}>{isLoading ? t('common.loading') : t('subscriptionPlans.retry')}</Text>
             </TouchableOpacity>
           )}
 
           {monthlyPlan ? (
             <View style={styles.planCard}>
-              <Text style={styles.planTitle}>Plan mensual</Text>
+              <Text style={styles.planTitle}>{t('subscriptionPlans.monthlyTitle')}</Text>
               <Text style={styles.planDescription}>
-                {monthlyPlan?.product?.description ?? 'Duración: 30 días.'}
+                {monthlyPlan?.product?.description ?? t('subscriptionPlans.monthlyDuration')}
               </Text>
-              <Text style={styles.planDescription}>Duración: 30 días.</Text>
+              <Text style={styles.planDescription}>{t('subscriptionPlans.monthlyDuration')}</Text>
               <Text style={styles.planPrice}>{monthlyPlan?.product?.priceString ?? '-'}</Text>
             </View>
           ) : (
             <View style={styles.planCard}>
-              <Text style={styles.planTitle}>Plan mensual</Text>
-              <Text style={styles.planDescription}>Duración: 30 días.</Text>
-              <Text style={styles.planDescription}>No disponible por el momento.</Text>
+              <Text style={styles.planTitle}>{t('subscriptionPlans.monthlyTitle')}</Text>
+              <Text style={styles.planDescription}>{t('subscriptionPlans.monthlyDuration')}</Text>
+              <Text style={styles.planDescription}>{t('subscriptionPlans.notAvailable')}</Text>
             </View>
           )}
 
           {annualPlan ? (
             <View style={styles.planCard}>
-              <Text style={styles.planTitle}>Plan anual</Text>
+              <Text style={styles.planTitle}>{t('subscriptionPlans.annualTitle')}</Text>
               <Text style={styles.planDescription}>
-                {annualPlan?.product?.description ?? 'Duración: 1 año.'}
+                {annualPlan?.product?.description ?? t('subscriptionPlans.annualDuration')}
               </Text>
-              <Text style={styles.planDescription}>Duración: 1 año.</Text>
+              <Text style={styles.planDescription}>{t('subscriptionPlans.annualDuration')}</Text>
               <Text style={styles.planPrice}>{annualPlan?.product?.priceString ?? '-'}</Text>
             </View>
           ) : (
             <View style={styles.planCard}>
-              <Text style={styles.planTitle}>Plan anual</Text>
-              <Text style={styles.planDescription}>Duración: 1 año.</Text>
-              <Text style={styles.planDescription}>No disponible por el momento.</Text>
+              <Text style={styles.planTitle}>{t('subscriptionPlans.annualTitle')}</Text>
+              <Text style={styles.planDescription}>{t('subscriptionPlans.annualDuration')}</Text>
+              <Text style={styles.planDescription}>{t('subscriptionPlans.notAvailable')}</Text>
             </View>
           )}
         </View>

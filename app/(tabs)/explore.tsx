@@ -1,15 +1,19 @@
 import { Image } from 'expo-image';
 import { Platform, StyleSheet } from 'react-native';
 
-import { Collapsible } from '@/components/ui/collapsible';
 import { ExternalLink } from '@/components/external-link';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { Collapsible } from '@/components/ui/collapsible';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Fonts } from '@/constants/theme';
+import { useLanguage } from '@/providers/LanguageProvider';
 
 export default function TabTwoScreen() {
+  const { language } = useLanguage();
+  const isEs = language === 'es';
+
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
@@ -27,69 +31,81 @@ export default function TabTwoScreen() {
           style={{
             fontFamily: Fonts.rounded,
           }}>
-          Explore
+          {isEs ? 'Explorar' : 'Explore'}
         </ThemedText>
       </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
+      <ThemedText>
+        {isEs
+          ? 'Esta pantalla incluye ejemplos para ayudarte a comenzar.'
+          : 'This screen includes example code to help you get started.'}
+      </ThemedText>
+      <Collapsible title={isEs ? 'Enrutado por archivos' : 'File-based routing'}>
         <ThemedText>
-          This app has two screens:{' '}
+          {isEs ? 'Esta app tiene dos pantallas:' : 'This app has two screens:'}{' '}
           <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
           <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
         </ThemedText>
         <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
+          {isEs ? 'El archivo de layout en ' : 'The layout file in '}
+          <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
+          {isEs ? 'configura el navegador de tabs.' : 'sets up the tab navigator.'}
         </ThemedText>
         <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
+          <ThemedText type="link">{isEs ? 'Ver más' : 'Learn more'}</ThemedText>
         </ExternalLink>
       </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
+      <Collapsible title={isEs ? 'Soporte Android, iOS y web' : 'Android, iOS, and web support'}>
         <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
+          {isEs
+            ? 'Puedes abrir este proyecto en Android, iOS y web. Para abrir la versión web, presiona '
+            : 'You can open this project on Android, iOS, and the web. To open the web version, press '}
+          <ThemedText type="defaultSemiBold">w</ThemedText>
+          {isEs ? ' en la terminal donde ejecutas este proyecto.' : ' in the terminal running this project.'}
         </ThemedText>
       </Collapsible>
-      <Collapsible title="Images">
+      <Collapsible title={isEs ? 'Imágenes' : 'Images'}>
         <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
+          {isEs ? 'Para imágenes estáticas, puedes usar los sufijos ' : 'For static images, you can use the '}
+          <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
+          <ThemedText type="defaultSemiBold">@3x</ThemedText>
+          {isEs ? ' para distintos niveles de densidad de pantalla.' : ' suffixes to provide files for different screen densities.'}
         </ThemedText>
         <Image
           source={require('@/assets/images/react-logo.png')}
           style={{ width: 100, height: 100, alignSelf: 'center' }}
         />
         <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
+          <ThemedText type="link">{isEs ? 'Ver más' : 'Learn more'}</ThemedText>
         </ExternalLink>
       </Collapsible>
-      <Collapsible title="Light and dark mode components">
+      <Collapsible title={isEs ? 'Componentes modo claro/oscuro' : 'Light and dark mode components'}>
         <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
+          {isEs ? 'Esta plantilla soporta modo claro y oscuro. El hook ' : 'This template has light and dark mode support. The '}
+          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText>
+          {isEs
+            ? ' te permite detectar el esquema de color actual del usuario para ajustar la UI.'
+            : ' hook lets you inspect what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.'}
         </ThemedText>
         <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
+          <ThemedText type="link">{isEs ? 'Ver más' : 'Learn more'}</ThemedText>
         </ExternalLink>
       </Collapsible>
-      <Collapsible title="Animations">
+      <Collapsible title={isEs ? 'Animaciones' : 'Animations'}>
         <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
+          {isEs ? 'Esta plantilla incluye un ejemplo de componente animado. El componente ' : 'This template includes an example of an animated component. The '}
+          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText>
+          {isEs ? ' usa la potente librería ' : ' component uses the powerful '}
           <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
             react-native-reanimated
           </ThemedText>{' '}
-          library to create a waving hand animation.
+          {isEs ? 'para crear una animación de saludo.' : 'library to create a waving hand animation.'}
         </ThemedText>
         {Platform.select({
           ios: (
             <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
+              {isEs ? 'El componente ' : 'The '}
+              <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
+              {isEs ? 'aplica un efecto parallax en la imagen del encabezado.' : 'component provides a parallax effect for the header image.'}
             </ThemedText>
           ),
         })}

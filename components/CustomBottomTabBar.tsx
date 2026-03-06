@@ -1,6 +1,7 @@
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { usePathname, useRouter } from 'expo-router';
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -8,6 +9,7 @@ export default function CustomBottomTabBar() {
   const router = useRouter();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   const tabs = useMemo(() => [
     {
@@ -15,37 +17,37 @@ export default function CustomBottomTabBar() {
       route: '/',
       icon: 'home-outline',
       iconType: 'ionicons',
-      title: 'Home',
+      title: t('tabs.home'),
     },
     {
       name: 'play',
       route: '/play',
       icon: 'game-controller-outline',
       iconType: 'ionicons',
-      title: 'Jugar',
+      title: t('tabs.play'),
     },
     {
       name: 'cards',
       route: '/new_cards',
       icon: 'clone',
       iconType: 'fontawesome',
-      title: 'Cartas',
+      title: t('tabs.cards'),
     },
     {
       name: 'subscription',
       route: '/subscription',
       icon: 'credit-card',
       iconType: 'fontawesome',
-      title: 'Suscripcion',
+      title: t('tabs.subscription'),
     },
     {
       name: 'settings',
       route: '/settings',
       icon: 'settings-outline',
       iconType: 'ionicons',
-      title: 'Configuracion',
+      title: t('tabs.settings'),
     },
-  ], []);
+  ], [t]);
 
   const isActive = (route: string) => {
     if (route === '/') {

@@ -1,10 +1,15 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useLanguage } from '@/providers/LanguageProvider';
+
 export default function SettingsScreen() {
   const { width } = useWindowDimensions();
+  const { t } = useTranslation();
+  const { language, setLanguage } = useLanguage();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
@@ -14,25 +19,25 @@ export default function SettingsScreen() {
 
   const handleUpdatePassword = () => {
     if (!currentPassword || !newPassword || !confirmNewPassword) {
-      Alert.alert('Campos incompletos', 'Completá todos los campos para continuar.');
+      Alert.alert(t('settings.incompleteFieldsTitle'), t('settings.incompleteFieldsMessage'));
       return;
     }
 
     if (newPassword !== confirmNewPassword) {
-      Alert.alert('Contraseña inválida', 'La nueva contraseña y su confirmación no coinciden.');
+      Alert.alert(t('settings.invalidPasswordTitle'), t('settings.invalidPasswordMessage'));
       return;
     }
 
-    Alert.alert('Próximamente', 'La actualización de contraseña estará disponible en una próxima versión.');
+    Alert.alert(t('settings.comingSoonTitle'), t('settings.updatePasswordComingSoon'));
   };
 
   const handleDeleteAccount = () => {
     if (!confirmDeletePassword) {
-      Alert.alert('Confirmación requerida', 'Ingresá tu contraseña para eliminar la cuenta.');
+      Alert.alert(t('settings.confirmationRequiredTitle'), t('settings.confirmationRequiredMessage'));
       return;
     }
 
-    Alert.alert('Próximamente', 'La eliminación de cuenta estará disponible en una próxima versión.');
+    Alert.alert(t('settings.comingSoonTitle'), t('settings.deleteAccountComingSoon'));
   };
 
   return (
@@ -44,17 +49,46 @@ export default function SettingsScreen() {
       >
         <View style={styles.header}>
           <View style={styles.headerAccent} />
-          <Text style={styles.title}>Configuración</Text>
+          <Text style={styles.title}>{t('settings.title')}</Text>
+        </View>
+
+        <View style={[styles.languagePanelGlow, isWideLayout && styles.languagePanelWide]}>
+          <View style={styles.panelCard}>
+            <Text style={styles.panelTitle}>{t('settings.languageTitle')}</Text>
+            <Text style={styles.panelDescription}>{t('settings.languageDescription')}</Text>
+
+            <View style={styles.languageOptionsRow}>
+              <TouchableOpacity
+                style={[styles.languageOption, language === 'es' && styles.languageOptionActive]}
+                activeOpacity={0.9}
+                onPress={() => setLanguage('es')}
+              >
+                <Text style={[styles.languageOptionText, language === 'es' && styles.languageOptionTextActive]}>
+                  {t('settings.languageSpanish')}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.languageOption, language === 'en' && styles.languageOptionActive]}
+                activeOpacity={0.9}
+                onPress={() => setLanguage('en')}
+              >
+                <Text style={[styles.languageOptionText, language === 'en' && styles.languageOptionTextActive]}>
+                  {t('settings.languageEnglish')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
 
         <View style={[styles.cardsWrapper, isWideLayout && styles.cardsWrapperWide]}>
           <View style={[styles.panelGlow, styles.passwordPanelGlow, isWideLayout && styles.leftPanel]}>
             <View style={styles.panelCard}>
-              <Text style={styles.panelTitle}>Cambiar contraseña</Text>
-              <Text style={styles.panelDescription}>Actualizá tu contraseña para mantener tu cuenta segura.</Text>
+              <Text style={styles.panelTitle}>{t('settings.changePasswordTitle')}</Text>
+              <Text style={styles.panelDescription}>{t('settings.changePasswordDescription')}</Text>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Contraseña actual</Text>
+                <Text style={styles.inputLabel}>{t('settings.currentPassword')}</Text>
                 <TextInput
                   value={currentPassword}
                   onChangeText={setCurrentPassword}
@@ -65,7 +99,7 @@ export default function SettingsScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Nueva contraseña</Text>
+                <Text style={styles.inputLabel}>{t('settings.newPassword')}</Text>
                 <TextInput
                   value={newPassword}
                   onChangeText={setNewPassword}
@@ -76,7 +110,7 @@ export default function SettingsScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Confirmar nueva contraseña</Text>
+                <Text style={styles.inputLabel}>{t('settings.confirmNewPassword')}</Text>
                 <TextInput
                   value={confirmNewPassword}
                   onChangeText={setConfirmNewPassword}
@@ -93,7 +127,7 @@ export default function SettingsScreen() {
                   end={{ x: 1, y: 0.5 }}
                   style={styles.buttonGradient}
                 >
-                  <Text style={styles.buttonText}>Guardar nueva contraseña</Text>
+                  <Text style={styles.buttonText}>{t('settings.saveNewPassword')}</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </View>
@@ -101,11 +135,11 @@ export default function SettingsScreen() {
 
           <View style={[styles.panelGlow, styles.deletePanelGlow, isWideLayout && styles.rightPanel]}>
             <View style={styles.panelCard}>
-              <Text style={styles.panelTitle}>Eliminar cuenta</Text>
-              <Text style={styles.panelDescription}>Esta acción es irreversible. Se eliminará tu acceso y tu cuenta.</Text>
+              <Text style={styles.panelTitle}>{t('settings.deleteAccountTitle')}</Text>
+              <Text style={styles.panelDescription}>{t('settings.deleteAccountDescription')}</Text>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Confirmá tu contraseña</Text>
+                <Text style={styles.inputLabel}>{t('settings.confirmPassword')}</Text>
                 <TextInput
                   value={confirmDeletePassword}
                   onChangeText={setConfirmDeletePassword}
@@ -122,7 +156,7 @@ export default function SettingsScreen() {
                   end={{ x: 1, y: 0.5 }}
                   style={styles.buttonGradient}
                 >
-                  <Text style={styles.buttonText}>Eliminar mi cuenta</Text>
+                  <Text style={styles.buttonText}>{t('settings.deleteAccountButton')}</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </View>
@@ -142,12 +176,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 110,
+    gap: 24,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    marginBottom: 20,
   },
   headerAccent: {
     width: 6,
@@ -159,6 +193,49 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 22,
     fontWeight: '700',
+  },
+  languagePanelGlow: {
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: 'rgba(56, 189, 248, 0.45)',
+    backgroundColor: '#0D1844',
+    padding: 4,
+    shadowColor: '#38BDF8',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.28,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  languagePanelWide: {
+    maxWidth: 1120,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  languageOptionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 4,
+  },
+  languageOption: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#2D4A86',
+    backgroundColor: '#000a23',
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  languageOptionActive: {
+    borderColor: '#8B5CF6',
+    backgroundColor: 'rgba(139, 92, 246, 0.20)',
+  },
+  languageOptionText: {
+    color: '#BFC7D5',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  languageOptionTextActive: {
+    color: '#FFFFFF',
   },
   cardsWrapper: {
     width: '100%',

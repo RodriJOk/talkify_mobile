@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
@@ -19,6 +20,7 @@ import Toast from 'react-native-toast-message';
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   
   // --- Estados ---
   const [expoPushToken, setExpoPushToken] = useState('');
@@ -31,12 +33,12 @@ export default function HomeScreen() {
   const handleRegistrationError = useCallback((errorMessage: string, type: 'success' | 'error' = 'error') => { 
     Toast.show({
       type: type,
-      text1: type === 'error' ? 'Error' : 'Success',
+      text1: type === 'error' ? t('common.error') : t('common.success'),
       text2: errorMessage,
       visibilityTime: 3000,
       position: 'top',
     });
-  }, []);
+  }, [t]);
 
   // const registerForPushNotificationsAsync = useCallback(async () => {
   //   if (Platform.OS === 'android') {
@@ -177,10 +179,10 @@ export default function HomeScreen() {
 
       setIsInitialLoadDone(true);
     } catch (error: any) {
-      handleRegistrationError(`Error crítico al cargar: ${error.message || error}`, 'error');
+      handleRegistrationError(t('home.criticalLoadError', { message: error.message || error }), 'error');
       router.replace('/singin');
     }
-  }, [router, handleRegistrationError]);
+  }, [router, handleRegistrationError, t]);
   // }, [router, registerForPushNotifications, handleRegistrationError]);
 
   // --- Carga inicial solo una vez al montar ---
@@ -266,32 +268,32 @@ export default function HomeScreen() {
             resizeMode="contain"
           />
           <Text style={styles.userNameText}>
-            {userName ? `Bienvenido, ${userName}` : 'Bienvenido a la aplicación'}
+            {userName ? t('home.welcomeUser', { name: userName }) : t('home.welcomeFallback')}
           </Text>
         </View>
         <View style={styles.menuContainer}>
           <MenuItem
             icon={<Ionicons name="calendar-outline" size={24} color="#EAE9FF" />}
-            title="Jugar"
-            subtitle="Gira la ruleta"
+            title={t('home.playTitle')}
+            subtitle={t('home.playSubtitle')}
             onPress={() => handleNavigation('play')}
           />
           <MenuItem
             icon={<Ionicons name="albums-outline" size={24} color="#EAE9FF" />}
-            title="Cartas"
-            subtitle="Crea y administra tus cartas"
+            title={t('home.cardsTitle')}
+            subtitle={t('home.cardsSubtitle')}
             onPress={() => handleNavigation('/new_cards')}
           />
           <MenuItem
             icon={<Ionicons name="card-outline" size={24} color="#EAE9FF" />}
-            title="Suscripcion"
-            subtitle="Revisa tu plan actual"
+            title={t('home.subscriptionTitle')}
+            subtitle={t('home.subscriptionSubtitle')}
             onPress={() => handleNavigation('subscription')}
           />
           <MenuItem
             icon={<Ionicons name="settings-outline" size={24} color="#EAE9FF" />}
-            title="Configuracion"
-            subtitle="Ajusta preferencias de la app"
+            title={t('home.settingsTitle')}
+            subtitle={t('home.settingsSubtitle')}
             onPress={() => handleNavigation('settings')}
           />
           <Toast />

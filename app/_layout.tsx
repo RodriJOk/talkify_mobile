@@ -1,5 +1,6 @@
 import CustomBottomTabBar from '@/components/CustomBottomTabBar';
-import { getRevenueCatConfig, hasKnownRevenueCatKeyPrefix } from '@/constants/revenuecat';
+import { getRevenueCatConfig } from '@/constants/revenuecat';
+import { LanguageProvider } from '@/providers/LanguageProvider';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DrawerContentComponentProps, DrawerContentScrollView, DrawerItem } from '@react-navigation/drawer';
@@ -8,6 +9,7 @@ import { useFonts } from 'expo-font';
 import { usePathname, useRouter } from 'expo-router';
 import { Drawer } from 'expo-router/drawer';
 import React, { useLayoutEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, Platform, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Purchases, { LOG_LEVEL } from 'react-native-purchases';
@@ -17,22 +19,23 @@ import Toast from 'react-native-toast-message';
 function CustomDrawerContent(props: DrawerContentComponentProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { t } = useTranslation();
 
   const handleLogout = async () => {
     Alert.alert(
-      "Cerrar Sesión",
-      "¿Estás seguro de que quieres cerrar la sesión?",
+      t('drawer.logoutTitle'),
+      t('drawer.logoutMessage'),
       [
-        { text: "Cancelar", style: "cancel" },
+        { text: t('drawer.logoutCancel'), style: "cancel" },
         {
-          text: "Sí, cerrar sesión",
+          text: t('drawer.logoutConfirm'),
           onPress: async () => {
             try {
               await AsyncStorage.clear();
               router.replace('/singin');
             } catch (e) {
               console.error("Error al cerrar la sesión:", e);
-              Alert.alert("Error", "No se pudo cerrar la sesión correctamente.");
+              Alert.alert(t('drawer.logoutErrorTitle'), t('drawer.logoutErrorMessage'));
             }
           },
           style: 'destructive'
@@ -42,18 +45,17 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
   };
 
   const drawerItems = React.useMemo(() => [
-    { label: 'Home', route: '/', icon: 'home-outline' },
-    { label: 'Jugar', route: '/play', icon: 'game-controller-outline' },
-    { label: 'Cartas', route: '/new_cards', icon: 'albums-outline' },
-    { label: 'Suscripcion', route: '/subscription', icon: 'card-outline' },
-    { label: 'Configuracion', route: '/settings', icon: 'settings-outline' }
-  ], []);
+    { label: t('drawer.home'), route: '/', icon: 'home-outline' },
+    { label: t('drawer.play'), route: '/play', icon: 'game-controller-outline' },
+    { label: t('drawer.cards'), route: '/new_cards', icon: 'albums-outline' },
+    { label: t('drawer.subscription'), route: '/subscription', icon: 'card-outline' },
+    { label: t('drawer.settings'), route: '/settings', icon: 'settings-outline' }
+  ], [t]);
 
   return (
     <View style={{ flex: 1 }}> 
       <DrawerContentScrollView 
         {...props} 
-        paddingTop={0}
         contentContainerStyle={{ flexGrow: 1, paddingTop: 0 }}
         bounces={false}
         style={styles.drawerScroll}
@@ -97,7 +99,7 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
 
           <View style={styles.logoutSection}>
             <DrawerItem
-              label="Cerrar Sesión"
+              label={t('drawer.logout')}
               labelStyle={styles.logoutLabel}
               style={styles.logoutItem}
               onPress={handleLogout}
@@ -117,7 +119,9 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
 }
 
 // --- Layout Principal ---
-export default function RootLayout() {
+function RootLayoutContent() {
+  const { t } = useTranslation();
+
   const [fontsLoaded] = useFonts({
     'Poppins-Black': require('@/assets/fonts/Poppins-Black.ttf'),
     'Poppins-Bold': require('@/assets/fonts/Poppins-Bold.ttf'),
@@ -159,22 +163,30 @@ export default function RootLayout() {
             headerTintColor: '#fff',
           }}
         >
-          <Drawer.Screen name="(tabs)" options={{ title: 'Talkify' }} />
-          <Drawer.Screen name="new_cards" options={{ title: 'Cartas' }} />
-          <Drawer.Screen name="play" options={{ title: 'Jugar' }} />
-          <Drawer.Screen name="subscription" options={{ title: 'Suscripcion' }} />
-          <Drawer.Screen name="settings" options={{ title: 'Configuracion' }} />
+          <Drawer.Screen name="(tabs)" options={{ title: t('navigation.appTitle') }} />
+          <Drawer.Screen name="new_cards" options={{ title: t('navigation.newCards') }} />
+          <Drawer.Screen name="play" options={{ title: t('navigation.play') }} />
+          <Drawer.Screen name="subscription" options={{ title: t('navigation.subscription') }} />
+          <Drawer.Screen name="settings" options={{ title: t('navigation.settings') }} />
           <Drawer.Screen name="singin" options={{ headerShown: false, drawerItemStyle: { display: 'none' } }} />
           <Drawer.Screen name="register" options={{ headerShown: false, drawerItemStyle: { display: 'none' } }} />
           <Drawer.Screen name="forget_password" options={{ headerShown: false, drawerItemStyle: { display: 'none' } }} />
           <Drawer.Screen name="terms_and_conditions" options={{ headerShown: false, drawerItemStyle: { display: 'none' } }} />
-          <Drawer.Screen name="new_card_for_me" options={{ title: 'Carta Personalizada' }} />
-          <Drawer.Screen name="new_card_for_game" options={{ title: 'Carta para el Juego' }} />
+          <Drawer.Screen name="new_card_for_me" options={{ title: t('navigation.newCardForMe') }} />
+          <Drawer.Screen name="new_card_for_game" options={{ title: t('navigation.newCardForGame') }} />
         </Drawer>
         {shouldShowTabBar && <CustomBottomTabBar />}
       </View>
       <Toast />
     </GestureHandlerRootView>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <LanguageProvider>
+      <RootLayoutContent />
+    </LanguageProvider>
   );
 }
 

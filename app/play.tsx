@@ -1,13 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dimensions, Modal, PanResponder, PanResponderGestureState, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
-  Easing,
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming
+    Easing,
+    runOnJS,
+    useAnimatedStyle,
+    useSharedValue,
+    withTiming
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { G, Path, Text as SvgText } from 'react-native-svg';
@@ -222,6 +223,8 @@ const WheelOfFortune = ({
 };
 
 export default function PlayScreen() {
+  const { t, i18n } = useTranslation();
+  const appLanguage = (i18n.resolvedLanguage || i18n.language || 'es').toLowerCase().startsWith('en') ? 'en' : 'es';
   const [idUser, setIdUser] = useState<string>('');
   const [token, setToken] = useState<string>('');
   const [categories, setCategories] = useState<RouletteCategory[]>([]);
@@ -278,7 +281,7 @@ export default function PlayScreen() {
         const resolvedUserId = String(storedUserId || parsedUser?.id || '').trim();
 
         if (!resolvedUserId) {
-          setLoadError('No se encontró el usuario para cargar la ruleta.');
+          setLoadError(t('play.userNotFound'));
           return;
         }
 
@@ -291,6 +294,8 @@ export default function PlayScreen() {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',
+              'Accept-Language': appLanguage,
+              'X-App-Language': appLanguage,
               ...(storedToken ? { Authorization: `Bearer ${storedToken}` } : {}),
             },
           });
@@ -311,18 +316,20 @@ export default function PlayScreen() {
         }
 
         // Cargar datos de la ruleta
-        const response = await fetch(`${API_BASE_URL}/roulette-data/${resolvedUserId}`, {
+        console.log(`${API_BASE_URL}/roulette-data/${resolvedUserId}?lang=${appLanguage}`);
+        const response = await fetch(`${API_BASE_URL}/roulette-data/${resolvedUserId}?lang=${appLanguage}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
+            'Accept-Language': appLanguage,
+            'X-App-Language': appLanguage,
             ...(storedToken ? { Authorization: `Bearer ${storedToken}` } : {}),
           },
         });
 
         const data = await response.json();
-
         if (!response.ok) {
-          throw new Error(data?.message || 'No se pudo cargar la ruleta.');
+          throw new Error(data?.message || t('play.rouletteLoadError'));
         }
 
         setCategories(Array.isArray(data?.categories) ? data.categories : []);
@@ -330,14 +337,14 @@ export default function PlayScreen() {
         setSpinLimit(Number(data?.spin_limit ?? 0));
         setCurrentUsage(Number(data?.current_usage ?? 0));
       } catch (error) {
-        setLoadError(error instanceof Error ? error.message : 'Error de red al cargar la ruleta.');
+        setLoadError(error instanceof Error ? error.message : t('play.rouletteLoadError'));
       } finally {
         setIsLoading(false);
       }
     };
 
     loadRouletteData();
-  }, []);
+  }, [appLanguage, t]);
 
   const incrementUsage = async () => {
     if (!idUser) return;
@@ -354,7 +361,7 @@ export default function PlayScreen() {
     const data = await response.json();
 
     if (!response.ok && !data?.limit_reached) {
-      throw new Error(data?.message || 'No se pudo actualizar el uso.');
+      throw new Error(data?.message || t('play.usageUpdateError'));
     }
 
     setCurrentUsage(Number(data?.current_usage ?? currentUsage));
@@ -404,7 +411,7 @@ export default function PlayScreen() {
       const usageData = await incrementUsage();
 
       if (usageData?.limit_reached && usageData?.was_incremented === false) {
-        alert('Has alcanzado tu límite semanal de giros.');
+        alert(t('play.limitReached'));
         return;
       }
 
@@ -416,17 +423,17 @@ export default function PlayScreen() {
 
       openResultModal(
         resultSegment.label,
-        selectedCard?.content ?? 'No hay tarjeta disponible para esta categoría.'
+        selectedCard?.content ?? t('play.noCardInCategory')
       );
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Error al procesar el giro.');
+      alert(error instanceof Error ? error.message : t('play.spinProcessError'));
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.shotsLabel}>{infiniteSpins ? 'GIROS ILIMITADOS' : 'TIROS DISPONIBLES'}</Text>
+        <Text style={styles.shotsLabel}>{infiniteSpins ? t('play.unlimitedSpins') : t('play.spinsAvailable')}</Text>
         {!infiniteSpins && (
           <View style={styles.shotsBadge}>
             <Text style={styles.shotsText}>{usedSpins} / {spinLimit}</Text>
@@ -436,11 +443,11 @@ export default function PlayScreen() {
 
       <View style={styles.content}>
         {isLoading ? (
-          <Text style={styles.helperText}>Cargando ruleta...</Text>
+          <Text style={styles.helperText}>{t('play.loadingRoulette')}</Text>
         ) : loadError ? (
           <Text style={styles.helperText}>{loadError}</Text>
         ) : wheelData.length === 0 ? (
-          <Text style={styles.helperText}>No hay categorías disponibles.</Text>
+          <Text style={styles.helperText}>{t('play.noCategories')}</Text>
         ) : (
           <WheelOfFortune
             data={wheelData}
@@ -473,7 +480,7 @@ export default function PlayScreen() {
 
                 <TouchableOpacity style={styles.resultReplayButton} onPress={closeResultModal} activeOpacity={0.8}>
                   <Ionicons name="refresh-outline" size={16} color="#8E9BB6" />
-                  <Text style={styles.resultReplayText}>Girar de nuevo</Text>
+                  <Text style={styles.resultReplayText}>{t('play.spinAgain')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -663,7 +670,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   }
 });
-
-function setInfiniteSpins(arg0: boolean) {
-  throw new Error('Function not implemented.');
-}

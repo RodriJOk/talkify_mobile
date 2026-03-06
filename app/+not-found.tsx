@@ -1,17 +1,20 @@
 import { Link, Stack } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 
 export default function NotFoundScreen() {
+  const { t } = useTranslation();
+
   return (
     <>
       <Stack.Screen options={{ title: 'Oops!' }} />
       <ThemedView style={styles.container}>
-        <ThemedText type="title">Esta pagina no funciona.</ThemedText>
+        <ThemedText type="title">{t('notFound.title')}</ThemedText>
         <Link href="/" style={styles.link}>
-          <ThemedText type="link">Ir a la pantalla de inicio!</ThemedText>
+          <ThemedText type="link">{t('notFound.goHome')}</ThemedText>
         </Link>
       </ThemedView>
     </>

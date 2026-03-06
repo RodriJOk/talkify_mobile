@@ -1,18 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function NewCards() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <View style={styles.header}>
           <View style={styles.headerAccent} />
-          <Text style={styles.title}>Crear carta</Text>
+          <Text style={styles.title}>{t('newCards.title')}</Text>
         </View>
 
         <View style={styles.buttonsContainer}>
@@ -22,7 +24,7 @@ export default function NewCards() {
             onPress={() => router.push('/new_card_for_me')}
           >
             <Ionicons name="person" size={34} color="#FFFFFF" />
-            <Text style={styles.optionText}>Para mí</Text>
+            <Text style={styles.optionText}>{t('newCards.forMe')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -31,7 +33,7 @@ export default function NewCards() {
             onPress={() => router.push('/new_card_for_game')}
           >
             <Ionicons name="game-controller" size={34} color="#FFFFFF" />
-            <Text style={styles.optionText}>Para el juego</Text>
+            <Text style={styles.optionText}>{t('newCards.forGame')}</Text>
           </TouchableOpacity>
         </View>
       </View>
