@@ -316,7 +316,6 @@ export default function PlayScreen() {
         }
 
         // Cargar datos de la ruleta
-        console.log(`${API_BASE_URL}/roulette-data/${resolvedUserId}?lang=${appLanguage}`);
         const response = await fetch(`${API_BASE_URL}/roulette-data/${resolvedUserId}?lang=${appLanguage}`, {
           method: 'GET',
           headers: {
