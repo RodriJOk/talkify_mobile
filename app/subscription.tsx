@@ -1,4 +1,5 @@
 import { getRevenueCatConfig } from '@/constants/revenuecat';
+import { buildAuthHeaders } from '@/utils/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
@@ -176,7 +177,7 @@ export default function SubscriptionScreen() {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            ...(storedToken ? { Authorization: `Bearer ${storedToken}` } : {}),
+            ...buildAuthHeaders(storedToken),
           },
         });
 
@@ -288,7 +289,7 @@ export default function SubscriptionScreen() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          ...buildAuthHeaders(token),
         },
         body: JSON.stringify(subscriptionData),
       });

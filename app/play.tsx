@@ -1,14 +1,15 @@
+import { buildAuthHeaders } from '@/utils/auth';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dimensions, Modal, PanResponder, PanResponderGestureState, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
-    Easing,
-    runOnJS,
-    useAnimatedStyle,
-    useSharedValue,
-    withTiming
+  Easing,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { G, Path, Text as SvgText } from 'react-native-svg';
@@ -296,7 +297,7 @@ export default function PlayScreen() {
               'Content-Type': 'application/json',
               'Accept-Language': appLanguage,
               'X-App-Language': appLanguage,
-              ...(storedToken ? { Authorization: `Bearer ${storedToken}` } : {}),
+              ...buildAuthHeaders(storedToken),
             },
           });
 
@@ -322,7 +323,7 @@ export default function PlayScreen() {
             'Content-Type': 'application/json',
             'Accept-Language': appLanguage,
             'X-App-Language': appLanguage,
-            ...(storedToken ? { Authorization: `Bearer ${storedToken}` } : {}),
+            ...buildAuthHeaders(storedToken),
           },
         });
 
@@ -352,7 +353,7 @@ export default function PlayScreen() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...buildAuthHeaders(token),
       },
       body: JSON.stringify({ id_user: Number(idUser) }),
     });

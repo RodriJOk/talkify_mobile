@@ -1,3 +1,4 @@
+import { getAuthHeaders } from '@/utils/auth';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
@@ -47,12 +48,15 @@ export default function NewCardForMe() {
         user_id: Number(userId),
       });
       try {
+      const authHeaders = await getAuthHeaders();
+
       const response = await fetch(`${API_BASE_URL}/create_card_for_me`, {
           method: 'POST',
           headers: {
           'Content-Type': 'application/json',
           'Accept-Language': appLanguage,
           'X-App-Language': appLanguage,
+          ...authHeaders,
           },
           body: JSON.stringify({  
             content: content.trim(),
@@ -99,10 +103,13 @@ export default function NewCardForMe() {
 
       const loadCategories = async () => {
       try {
+          const authHeaders = await getAuthHeaders();
+
           const response = await fetch(`${API_BASE_URL}/get_categories?lang=${appLanguage}`, {
             headers: {
               'Accept-Language': appLanguage,
               'X-App-Language': appLanguage,
+              ...authHeaders,
             },
           });
           const data = await response.json();

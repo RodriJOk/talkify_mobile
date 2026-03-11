@@ -1,3 +1,4 @@
+import { getAuthHeaders } from '@/utils/auth';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import React, { useEffect, useState } from 'react';
@@ -38,12 +39,15 @@ export default function CardsScreen() {
       status,
     });
     try {
+      const authHeaders = await getAuthHeaders();
+
       const response = await fetch(`${API_BASE_URL}/create_card`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept-Language': appLanguage,
           'X-App-Language': appLanguage,
+          ...authHeaders,
         },
         body: JSON.stringify({  
           content: content.trim(),
@@ -71,10 +75,13 @@ export default function CardsScreen() {
   useEffect(() => {
     const loadCategories = async () => {
       try {
+        const authHeaders = await getAuthHeaders();
+
         const response = await fetch(`${API_BASE_URL}/get_categories?lang=${appLanguage}`, {
           headers: {
             'Accept-Language': appLanguage,
             'X-App-Language': appLanguage,
+            ...authHeaders,
           },
         });
         const data = await response.json();
