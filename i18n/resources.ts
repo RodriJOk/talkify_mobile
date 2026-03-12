@@ -213,7 +213,7 @@ export const resources = {
         purchaseErrorFallback: 'No se pudo completar la compra.',
       },
       subscriptionPlans: {
-        title: 'Planes disponibles',
+        title: 'Planes de Suscripcion',
         cardTitle: 'PLANES DISPONIBLES',
         loadingUnknownError: 'Error desconocido al cargar planes.',
         missingApiKey: 'No hay API key de RevenueCat configurada para {{appEnv}}. Revisá {{expectedKeyLabel}}',
