@@ -1,7 +1,7 @@
 import { getRevenueCatConfig } from '@/constants/revenuecat';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, Linking, ScrollView } from 'react-native';
 import Purchases from 'react-native-purchases';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -45,7 +45,7 @@ export default function SubscriptionPlansScreen() {
       }
 
       Purchases.configure({ apiKey: selectedApiKey });
-      console.log('[RevenueCat][subscription_plans] SDK configurado localmente para evitar condición de carrera.');
+      console.log('[RevenueCat][subscription_plans] SDK configurado localmente.');
     } catch (error: any) {
       const errorMessage = String(error?.message ?? '').toLowerCase();
       if (
@@ -54,7 +54,6 @@ export default function SubscriptionPlansScreen() {
       ) {
         return;
       }
-
       throw error;
     }
   };
@@ -93,42 +92,23 @@ export default function SubscriptionPlansScreen() {
         return;
       }
 
-      if (currentPackages.length === 0) {
-        setMonthlyPlan(null);
-        setAnnualPlan(null);
-        setLoadError(t('subscriptionPlans.noPlansForBuild'));
-        return;
-      }
-
       const monthly = currentPackages.find((item) => {
         const packageType = String(item.packageType ?? '').toUpperCase();
         const period = String(item.product?.subscriptionPeriod ?? '').toUpperCase();
-        const title = String(item.product?.title ?? '').toLowerCase();
-        const identifier = String(item.identifier ?? '').toLowerCase();
-
         return (
           packageType === 'MONTHLY' ||
           period.includes('P1M') ||
-          title.includes('mes') ||
-          title.includes('monthly') ||
-          identifier.includes('month') ||
-          identifier.includes('mensual')
+          item.identifier.toLowerCase().includes('month')
         );
       });
 
       const annual = currentPackages.find((item) => {
         const packageType = String(item.packageType ?? '').toUpperCase();
         const period = String(item.product?.subscriptionPeriod ?? '').toUpperCase();
-        const title = String(item.product?.title ?? '').toLowerCase();
-        const identifier = String(item.identifier ?? '').toLowerCase();
-
         return (
           packageType === 'ANNUAL' ||
           period.includes('P1Y') ||
-          title.includes('anual') ||
-          title.includes('annual') ||
-          identifier.includes('year') ||
-          identifier.includes('anual')
+          item.identifier.toLowerCase().includes('year')
         );
       });
 
@@ -139,7 +119,6 @@ export default function SubscriptionPlansScreen() {
       setAnnualPlan(null);
       const detailedError = getRevenueCatErrorMessage(error);
       setLoadError(t('subscriptionPlans.loadPlansError', { detail: detailedError }));
-      console.log('[RevenueCat][subscription_plans] getOfferings error:', error);
     } finally {
       setIsLoading(false);
     }
@@ -149,9 +128,14 @@ export default function SubscriptionPlansScreen() {
     loadPlans();
   }, []);
 
+  // Función para abrir enlaces legales
+  const openLink = (url: string) => {
+    Linking.openURL(url).catch((err) => console.error("Couldn't load page", err));
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <View style={styles.headerAccent} />
           <Text style={styles.title}>{t('subscriptionPlans.title')}</Text>
@@ -161,52 +145,49 @@ export default function SubscriptionPlansScreen() {
           <Text style={styles.cardEyebrow}>{t('subscriptionPlans.cardTitle')}</Text>
 
           {!!loadError && <Text style={styles.errorText}>{loadError}</Text>}
-          {!!loadError && (
-            <TouchableOpacity
-              style={styles.retryButton}
-              onPress={loadPlans}
-              activeOpacity={0.85}
-              disabled={isLoading}
-            >
-              <Text style={styles.retryText}>{isLoading ? t('common.loading') : t('subscriptionPlans.retry')}</Text>
-            </TouchableOpacity>
-          )}
+          
+          {/* Plan Mensual */}
+          <View style={styles.planCard}>
+            <Text style={styles.planTitle}>{t('subscriptionPlans.monthlyTitle')}</Text>
+            <Text style={styles.planDescription}>
+              {monthlyPlan?.product?.description ?? t('subscriptionPlans.monthlyDuration')}
+            </Text>
+            <Text style={styles.planPrice}>
+              {monthlyPlan ? monthlyPlan.product.priceString : t('subscriptionPlans.notAvailable')}
+            </Text>
+          </View>
 
-          {monthlyPlan ? (
-            <View style={styles.planCard}>
-              <Text style={styles.planTitle}>{t('subscriptionPlans.monthlyTitle')}</Text>
-              <Text style={styles.planDescription}>
-                {monthlyPlan?.product?.description ?? t('subscriptionPlans.monthlyDuration')}
-              </Text>
-              <Text style={styles.planDescription}>{t('subscriptionPlans.monthlyDuration')}</Text>
-              <Text style={styles.planPrice}>{monthlyPlan?.product?.priceString ?? '-'}</Text>
-            </View>
-          ) : (
-            <View style={styles.planCard}>
-              <Text style={styles.planTitle}>{t('subscriptionPlans.monthlyTitle')}</Text>
-              <Text style={styles.planDescription}>{t('subscriptionPlans.monthlyDuration')}</Text>
-              <Text style={styles.planDescription}>{t('subscriptionPlans.notAvailable')}</Text>
-            </View>
-          )}
-
-          {annualPlan ? (
-            <View style={styles.planCard}>
-              <Text style={styles.planTitle}>{t('subscriptionPlans.annualTitle')}</Text>
-              <Text style={styles.planDescription}>
-                {annualPlan?.product?.description ?? t('subscriptionPlans.annualDuration')}
-              </Text>
-              <Text style={styles.planDescription}>{t('subscriptionPlans.annualDuration')}</Text>
-              <Text style={styles.planPrice}>{annualPlan?.product?.priceString ?? '-'}</Text>
-            </View>
-          ) : (
-            <View style={styles.planCard}>
-              <Text style={styles.planTitle}>{t('subscriptionPlans.annualTitle')}</Text>
-              <Text style={styles.planDescription}>{t('subscriptionPlans.annualDuration')}</Text>
-              <Text style={styles.planDescription}>{t('subscriptionPlans.notAvailable')}</Text>
-            </View>
-          )}
+          {/* Plan Anual */}
+          <View style={styles.planCard}>
+            <Text style={styles.planTitle}>{t('subscriptionPlans.annualTitle')}</Text>
+            <Text style={styles.planDescription}>
+              {annualPlan?.product?.description ?? t('subscriptionPlans.annualDuration')}
+            </Text>
+            <Text style={styles.planPrice}>
+              {annualPlan ? annualPlan.product.priceString : t('subscriptionPlans.notAvailable')}
+            </Text>
+          </View>
         </View>
-      </View>
+
+        {/* --- SECCIÓN REQUERIDA POR APPLE (GUIDELINE 3.1.2) --- */}
+        <View style={styles.legalSection}>
+          <Text style={styles.legalDisclaimer}>
+            {t('subscriptionPlans.legalDisclaimer', 'El pago se cargará a tu cuenta de iTunes al confirmar la compra. La suscripción se renueva automáticamente a menos que se cancele 24 horas antes del final del período actual.')}
+          </Text>
+          
+          <View style={styles.legalLinksContainer}>
+            <TouchableOpacity onPress={() => openLink('https://www.apple.com/legal/internet-services/itunes/dev/stdeula/')}>
+              <Text style={styles.legalLink}>{t('subscriptionPlans.termsOfUse', 'Terms of Use (EULA)')}</Text>
+            </TouchableOpacity>
+            
+            <Text style={styles.legalDivider}>•</Text>
+            
+            <TouchableOpacity onPress={() => openLink('https://talkify.store/privacy_policy')}>
+              <Text style={styles.legalLink}>{t('subscriptionPlans.privacyPolicy', 'Privacy Policy')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -216,10 +197,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#050A18',
   },
-  content: {
-    flex: 1,
+  scrollContent: {
     paddingHorizontal: 24,
     paddingTop: 40,
+    paddingBottom: 40,
   },
   header: {
     flexDirection: 'row',
@@ -244,37 +225,26 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#6D42D8',
     padding: 20,
+    gap: 16,
+    // Sombra para iOS
     shadowColor: '#7C3AED',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
     shadowRadius: 16,
+    // Sombra para Android
     elevation: 14,
-    gap: 16,
   },
   cardEyebrow: {
     color: '#9BA3B2',
     fontSize: 12,
     letterSpacing: 1.2,
     fontWeight: '700',
+    marginBottom: 4,
   },
   errorText: {
     color: '#FF5C7A',
     fontSize: 13,
     fontWeight: '600',
-  },
-  retryButton: {
-    alignSelf: 'flex-start',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(196, 181, 253, 0.5)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: 'rgba(124, 58, 237, 0.15)',
-  },
-  retryText: {
-    color: '#C4B5FD',
-    fontSize: 12,
-    fontWeight: '700',
   },
   planCard: {
     borderRadius: 14,
@@ -298,5 +268,33 @@ const styles = StyleSheet.create({
     color: '#C4B5FD',
     fontSize: 14,
     fontWeight: '700',
+    marginTop: 4,
+  },
+  // --- Estilos Legales ---
+  legalSection: {
+    marginTop: 30,
+    alignItems: 'center',
+  },
+  legalDisclaimer: {
+    color: '#64748B',
+    fontSize: 11,
+    textAlign: 'center',
+    lineHeight: 16,
+    marginBottom: 12,
+  },
+  legalLinksContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  legalLink: {
+    color: '#8B5CF6',
+    fontSize: 12,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
+  legalDivider: {
+    color: '#64748B',
   },
 });
