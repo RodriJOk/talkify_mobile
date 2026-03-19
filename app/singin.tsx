@@ -87,6 +87,10 @@ export default function SingIn() {
     router.replace('/register');
   };
 
+  const continueAsGuest = () => {
+    router.replace('/(tabs)');
+  };
+
   useEffect(() => {
     if (error) {
       Toast.show({
@@ -152,6 +156,12 @@ export default function SingIn() {
                       <Text style={styles.buttonText}>{t('signin.login')}</Text>
                     </LinearGradient>
                 </TouchableOpacity>
+            </View>
+            <View style={styles.guestContainer}>
+              <Text style={styles.guestHint}>{t('signin.guestHint')}</Text>
+              <TouchableOpacity onPress={continueAsGuest} style={styles.guestButton}>
+                <Text style={styles.guestButtonText}>{t('signin.continueAsGuest')}</Text>
+              </TouchableOpacity>
             </View>
             <Toast />
         </View>
@@ -238,5 +248,29 @@ const styles = StyleSheet.create({
   forgetPasswordLink: {
     alignItems: 'center',
     paddingVertical: 12,
+  },
+  guestContainer: {
+    marginTop: 32,
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.12)',
+    paddingTop: 20,
+  },
+  guestHint: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 13,
+    textAlign: 'center',
+    fontFamily: 'Poppins-Regular',
+    marginBottom: 12,
+  },
+  guestButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+  },
+  guestButtonText: {
+    color: '#a855f7',
+    fontSize: 15,
+    fontFamily: 'Poppins-Regular',
+    textDecorationLine: 'underline',
   },
 });

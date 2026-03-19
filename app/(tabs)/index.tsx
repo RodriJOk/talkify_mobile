@@ -162,8 +162,9 @@ export default function HomeScreen() {
       const currentToken = await AsyncStorage.getItem('token');
       
       if (!user_information || !currentToken) {
-          router.replace('/singin');
-          return;
+        // Guest mode — allow access without an account
+        setIsInitialLoadDone(true);
+        return;
       }
 
       const session = JSON.parse(user_information);
@@ -180,7 +181,7 @@ export default function HomeScreen() {
       setIsInitialLoadDone(true);
     } catch (error: any) {
       handleRegistrationError(t('home.criticalLoadError', { message: error.message || error }), 'error');
-      router.replace('/singin');
+      setIsInitialLoadDone(true);
     }
   }, [router, handleRegistrationError, t]);
   // }, [router, registerForPushNotifications, handleRegistrationError]);
@@ -216,8 +217,7 @@ export default function HomeScreen() {
           setUserName(null);
           setUserSurname(null);
           setToken('');
-          setIsInitialLoadDone(false);
-          router.replace('/singin');
+          setIsInitialLoadDone(true);
           return;
         }
 
@@ -258,9 +258,18 @@ export default function HomeScreen() {
     </TouchableOpacity>
   );
 
+  const isGuest = !token;
+
   return (
     <SafeAreaProvider>
       <ScrollView contentContainerStyle={styles.container}>
+        {isGuest && (
+          <TouchableOpacity style={styles.guestBanner} onPress={() => router.push('/singin')}>
+            <Ionicons name="person-circle-outline" size={20} color="#a855f7" />
+            <Text style={styles.guestBannerText}>{t('home.signInBanner')}</Text>
+            <Text style={styles.guestBannerLink}>{t('home.signIn')}</Text>
+          </TouchableOpacity>
+        )}
         <View style={styles.header}>
           <Image
             source={require('@/assets/images/neon_logo_transparente.png')}
@@ -268,7 +277,7 @@ export default function HomeScreen() {
             resizeMode="contain"
           />
           <Text style={styles.userNameText}>
-            {userName ? t('home.welcomeUser', { name: userName }) : t('home.welcomeFallback')}
+            {userName ? t('home.welcomeUser', { name: userName }) : (isGuest ? t('home.welcomeGuest') : t('home.welcomeFallback'))}
           </Text>
         </View>
         <View style={styles.menuContainer}>
@@ -309,6 +318,31 @@ const styles = StyleSheet.create({
     backgroundColor: '#050A18',
     fontFamily: 'Poppins-Regular',
   },
+  guestBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(168, 85, 247, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(168, 85, 247, 0.3)',
+    borderRadius: 10,
+    marginHorizontal: 20,
+    marginTop: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    gap: 8,
+  },
+  guestBannerText: {
+    flex: 1,
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    fontFamily: 'Poppins-Regular',
+  },
+  guestBannerLink: {
+    color: '#a855f7',
+    fontSize: 13,
+    fontFamily: 'Poppins-Regular',
+    fontWeight: '600',
+  },
   header: {
     backgroundColor: '#0F1733',
     alignItems: 'center',

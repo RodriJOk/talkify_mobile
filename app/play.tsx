@@ -1,15 +1,16 @@
 import { buildAuthHeaders } from '@/utils/auth';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dimensions, Modal, PanResponder, PanResponderGestureState, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Dimensions, Modal, PanResponder, PanResponderGestureState, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
-  Easing,
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming
+    Easing,
+    runOnJS,
+    useAnimatedStyle,
+    useSharedValue,
+    withTiming
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { G, Path, Text as SvgText } from 'react-native-svg';
@@ -61,10 +62,14 @@ type SubscriptionStatus = {
 const WheelOfFortune = ({
   data,
   disabled,
+  requireAuth,
+  onRequireAuth,
   onFinished,
 }: {
   data: WheelSegment[];
   disabled: boolean;
+  requireAuth: boolean;
+  onRequireAuth: () => void;
   onFinished: (value: WheelSegment) => void;
 }) => {
   const rotation = useSharedValue(0);
@@ -77,7 +82,12 @@ const WheelOfFortune = ({
   const visualOffset = -90 - anglePerSegment / 2;
 
   const spinWheel = (gestureBoost = 0, direction: SpinDirection = 'clockwise') => {
-    if (isSpinning || disabled || numberOfSegments === 0) return;
+    if (isSpinning || numberOfSegments === 0) return;
+    if (requireAuth) {
+      onRequireAuth();
+      return;
+    }
+    if (disabled) return;
     setIsSpinning(true);
 
     const randomIndex = Math.floor(Math.random() * numberOfSegments);
@@ -224,6 +234,7 @@ const WheelOfFortune = ({
 };
 
 export default function PlayScreen() {
+  const router = useRouter();
   const { t, i18n } = useTranslation();
   const appLanguage = (i18n.resolvedLanguage || i18n.language || 'es').toLowerCase().startsWith('en') ? 'en' : 'es';
   const [idUser, setIdUser] = useState<string>('');
@@ -259,13 +270,30 @@ export default function PlayScreen() {
     ],
   }));
 
+  const isGuestUser = !token;
   const remainingSpins = Math.max(spinLimit - currentUsage, 0);
   const usedSpins = Math.min(currentUsage, spinLimit);
-  const wheelData: WheelSegment[] = categories.map((category, index) => ({
-    id: category.id,
-    label: category.name,
-    color: SEGMENT_COLORS[index % SEGMENT_COLORS.length],
-  }));
+  const wheelData: WheelSegment[] = isGuestUser
+    ? [{ id: -1, label: t('play.guestWheelLabel'), color: '#7B61FF' }]
+    : categories.map((category, index) => ({
+        id: category.id,
+        label: category.name,
+        color: SEGMENT_COLORS[index % SEGMENT_COLORS.length],
+      }));
+
+  const promptSignInForSpin = () => {
+    Alert.alert(
+      t('play.authRequiredTitle'),
+      t('play.authRequiredMessage'),
+      [
+        { text: t('play.authRequiredCancel'), style: 'cancel' },
+        {
+          text: t('play.authRequiredAction'),
+          onPress: () => router.push('/singin'),
+        },
+      ]
+    );
+  };
 
   useEffect(() => {
     const loadRouletteData = async () => {
@@ -282,7 +310,8 @@ export default function PlayScreen() {
         const resolvedUserId = String(storedUserId || parsedUser?.id || '').trim();
 
         if (!resolvedUserId) {
-          setLoadError(t('play.userNotFound'));
+          setIdUser('');
+          setToken('');
           return;
         }
 
@@ -433,8 +462,12 @@ export default function PlayScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.shotsLabel}>{infiniteSpins ? t('play.unlimitedSpins') : t('play.spinsAvailable')}</Text>
-        {!infiniteSpins && (
+        <Text style={styles.shotsLabel}>
+          {isGuestUser
+            ? t('play.signInToSpin')
+            : (infiniteSpins ? t('play.unlimitedSpins') : t('play.spinsAvailable'))}
+        </Text>
+        {!isGuestUser && !infiniteSpins && (
           <View style={styles.shotsBadge}>
             <Text style={styles.shotsText}>{usedSpins} / {spinLimit}</Text>
           </View>
@@ -451,7 +484,9 @@ export default function PlayScreen() {
         ) : (
           <WheelOfFortune
             data={wheelData}
-            disabled={!infiniteSpins && remainingSpins <= 0}
+            disabled={!isGuestUser && !infiniteSpins && remainingSpins <= 0}
+            requireAuth={isGuestUser}
+            onRequireAuth={promptSignInForSpin}
             onFinished={handleFinish}
           />
         )}

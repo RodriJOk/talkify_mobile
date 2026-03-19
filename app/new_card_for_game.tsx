@@ -1,10 +1,11 @@
 import { getAuthHeaders } from '@/utils/auth';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
@@ -20,6 +21,7 @@ export default function NewCardForGame() {
   const { t, i18n } = useTranslation();
   const appLanguage = (i18n.resolvedLanguage || i18n.language || 'es').toLowerCase().startsWith('en') ? 'en' : 'es';
   const [content, setContent] = useState('');
+    const [isGuestUser, setIsGuestUser] = useState(false);
     const [category, setCategory] = useState('');
     const [status, setStatus] = useState('active');
     const [categories, setCategories] = useState<Category[]>([]);
@@ -27,6 +29,10 @@ export default function NewCardForGame() {
     const pickerPlaceholderColor = Platform.OS === 'android' ? '#6B7280' : '#8EA0C1';
   
     const saveCard = async () => {
+        if (isGuestUser) {
+          promptSignInForCards();
+          return;
+        }
         if (!content.trim()) {
           alert(t('cardsForm.emptyContent'));
           return;
@@ -76,6 +82,19 @@ export default function NewCardForGame() {
       }
     
       useEffect(() => {
+        const loadSession = async () => {
+          try {
+            const [storedUserId, storedToken] = await Promise.all([
+              AsyncStorage.getItem('user_id'),
+              AsyncStorage.getItem('token'),
+            ]);
+
+            setIsGuestUser(!(storedUserId && storedToken));
+          } catch (error) {
+            setIsGuestUser(true);
+          }
+        };
+
         const loadCategories = async () => {
           try {
             const authHeaders = await getAuthHeaders();
@@ -97,11 +116,25 @@ export default function NewCardForGame() {
             setCategories([]);
           }
         };
-    
+        loadSession();
         loadCategories();
       }, [appLanguage, t]);
 
   const router = useRouter();
+
+  const promptSignInForCards = () => {
+    Alert.alert(
+      t('newCards.authRequiredTitle'),
+      t('newCards.authRequiredMessage'),
+      [
+        { text: t('newCards.authRequiredCancel'), style: 'cancel' },
+        {
+          text: t('newCards.authRequiredAction'),
+          onPress: () => router.push('/singin'),
+        },
+      ]
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -126,10 +159,16 @@ export default function NewCardForGame() {
         <View style={styles.formCard}>
           <Text style={styles.cardEyebrow}>{t('cardsForm.newCard')}</Text>
 
+          {isGuestUser && (
+            <TouchableOpacity style={styles.noticeCard} activeOpacity={0.9} onPress={promptSignInForCards}>
+              <Text style={styles.noticeText}>{t('newCards.loginRequiredHint')}</Text>
+            </TouchableOpacity>
+          )}
+
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>{t('cardsForm.content')}</Text>
             <TextInput
-              style={styles.textArea}
+              style={[styles.textArea, isGuestUser && styles.inputDisabled]}
               multiline
               numberOfLines={5}
               value={content}
@@ -137,18 +176,20 @@ export default function NewCardForGame() {
               placeholder={t('cardsForm.contentPlaceholder')}
               placeholderTextColor="#6E7B99"
               textAlignVertical="top"
+              editable={!isGuestUser}
             />
           </View>
 
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>{t('cardsForm.category')}</Text>
-            <View style={styles.selectField}>
+            <View style={[styles.selectField, isGuestUser && styles.inputDisabled]}>
               <Picker
                 selectedValue={category}
                 onValueChange={(value) => setCategory(String(value))}
                 style={styles.picker}
                 dropdownIconColor="#FFFFFF"
                 mode="dropdown"
+                enabled={!isGuestUser}
               >
                 <Picker.Item label={t('cardsForm.selectCategory')} value="" color={pickerPlaceholderColor} />
                 {categories.map((item) => (
@@ -161,9 +202,15 @@ export default function NewCardForGame() {
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>{t('cardsForm.state')}</Text>
             <TouchableOpacity
-              style={styles.selectField}
+              style={[styles.selectField, isGuestUser && styles.inputDisabled]}
               activeOpacity={0.85}
-              onPress={() => setStatus('active')}
+              onPress={() => {
+                if (isGuestUser) {
+                  promptSignInForCards();
+                  return;
+                }
+                setStatus('active');
+              }}
             >
               <Text style={styles.selectText}>{t('cardsForm.stateActive')}</Text>
               <Ionicons name="chevron-down" size={18} color="#FFFFFF" />
@@ -171,10 +218,10 @@ export default function NewCardForGame() {
           </View>
 
           <TouchableOpacity 
-            style={styles.saveButton} 
+            style={[styles.saveButton, isGuestUser && styles.saveButtonDisabled]} 
             activeOpacity={0.9}
             onPress={saveCard}>
-            <Text style={styles.saveButtonText}>{t('cardsForm.saveCard')}</Text>
+            <Text style={styles.saveButtonText}>{isGuestUser ? t('newCards.loginToCreate') : t('cardsForm.saveCard')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -276,6 +323,20 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     fontWeight: '700',
   },
+  noticeCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(216, 180, 254, 0.28)',
+    backgroundColor: 'rgba(168, 85, 247, 0.12)',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  noticeText: {
+    color: '#E9D5FF',
+    fontSize: 13,
+    fontWeight: '600',
+    lineHeight: 18,
+  },
   fieldGroup: {
     gap: 8,
   },
@@ -295,6 +356,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 14,
     fontWeight: '500',
+  },
+  inputDisabled: {
+    opacity: 0.55,
   },
   selectField: {
     minHeight: 44,
@@ -326,6 +390,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  saveButtonDisabled: {
+    backgroundColor: '#4B5563',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   saveButtonText: {
     color: '#FFFFFF',

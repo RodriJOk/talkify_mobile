@@ -33,6 +33,7 @@ export default function SubscriptionScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const [plan, setPlan] = useState('');
+  const [isGuestUser, setIsGuestUser] = useState(false);
   const pickerOptionColor = Platform.OS === 'android' ? '#111111' : '#FFFFFF';
   const pickerPlaceholderColor = Platform.OS === 'android' ? '#6B7280' : '#8EA0C1';
   const [packages, setPackages] = useState<any[]>([]);
@@ -167,9 +168,12 @@ export default function SubscriptionScreen() {
 
         const parsedUser = storedUserInfo ? JSON.parse(storedUserInfo) : null;
         const resolvedUserId = String(storedUserId || parsedUser?.id || '').trim();
+        const hasSession = Boolean(resolvedUserId && storedToken);
 
-        if (!resolvedUserId) {
-          setBackendStatusError(t('subscription.userMissing'));
+        setIsGuestUser(!hasSession);
+
+        if (!hasSession) {
+          setBackendStatusLoading(false);
           return;
         }
 
@@ -237,13 +241,28 @@ export default function SubscriptionScreen() {
 
   const subscriptionStateText = isSubscriptionActive ? t('subscription.activeState') : t('subscription.inactiveState');
 
+  const promptSignInForPayments = () => {
+    Alert.alert(
+      t('subscription.authRequiredTitle'),
+      t('subscription.authRequiredMessage'),
+      [
+        { text: t('subscription.authRequiredCancel'), style: 'cancel' },
+        {
+          text: t('subscription.authRequiredAction'),
+          onPress: () => router.push('/singin'),
+        },
+      ]
+    );
+  };
+
   const registerSubscriptionInBackend = async (purchaseResult: any, selectedPackage: any, entitlementId: string | null) => {
     try {
       const userInfo = await AsyncStorage.getItem('user_information');
       const token = await AsyncStorage.getItem('token');
 
       if (!userInfo || !token) {
-        Alert.alert(t('common.error'), t('subscription.userInfoError'));
+        // Guest user — purchase succeeded via RevenueCat, backend sync is optional
+        Alert.alert(t('subscription.purchaseRegistered'), t('subscription.guestPurchaseSuccess'));
         return;
       }
 
@@ -307,6 +326,16 @@ export default function SubscriptionScreen() {
   };
 
   const handlePurchase = async () => {
+    const [storedUserId, storedToken] = await Promise.all([
+      AsyncStorage.getItem('user_id'),
+      AsyncStorage.getItem('token'),
+    ]);
+
+    if (!storedUserId || !storedToken) {
+      promptSignInForPayments();
+      return;
+    }
+
     if (!selectedPackage) {
       Alert.alert(t('subscription.planRequiredTitle'), t('subscription.planRequiredMessage'));
       return;
@@ -350,6 +379,11 @@ export default function SubscriptionScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.card}>
           <Text style={styles.cardEyebrow}>{t('subscription.currentStatus')}</Text>
+          {isGuestUser && (
+            <View style={styles.guestNotice}>
+              <Text style={styles.guestNoticeText}>{t('subscription.guestNotice')}</Text>
+            </View>
+          )}
           <View
             style={[
               styles.statusPill,
@@ -421,6 +455,10 @@ export default function SubscriptionScreen() {
         <View style={styles.card}>
           <Text style={styles.cardEyebrow}>{t('subscription.payments')}</Text>
 
+          {isGuestUser && (
+            <Text style={styles.historyInfoText}>{t('subscription.guestHistoryNotice')}</Text>
+          )}
+
           <Text style={styles.historyInfoText}>
             {t('subscription.paymentHistoryInfo')}
           </Text>
@@ -480,6 +518,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     letterSpacing: 1.2,
     fontWeight: '700',
+  },
+  guestNotice: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(216, 180, 254, 0.28)',
+    backgroundColor: 'rgba(168, 85, 247, 0.10)',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  guestNoticeText: {
+    color: '#E9D5FF',
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 18,
   },
   statusPill: {
     marginTop: 12,

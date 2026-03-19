@@ -1,5 +1,7 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useMemo, useState } from 'react';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,9 +9,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLanguage } from '@/providers/LanguageProvider';
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const { width } = useWindowDimensions();
   const { t } = useTranslation();
   const { language, setLanguage } = useLanguage();
+  const [isGuestUser, setIsGuestUser] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
@@ -17,7 +21,39 @@ export default function SettingsScreen() {
 
   const isWideLayout = useMemo(() => width >= 980, [width]);
 
+  useEffect(() => {
+    const loadSession = async () => {
+      const [storedUserId, storedToken] = await Promise.all([
+        AsyncStorage.getItem('user_id'),
+        AsyncStorage.getItem('token'),
+      ]);
+
+      setIsGuestUser(!(storedUserId && storedToken));
+    };
+
+    loadSession();
+  }, []);
+
+  const promptSignInForProtectedSettings = () => {
+    Alert.alert(
+      t('settings.authRequiredTitle'),
+      t('settings.authRequiredMessage'),
+      [
+        { text: t('settings.authRequiredCancel'), style: 'cancel' },
+        {
+          text: t('settings.authRequiredAction'),
+          onPress: () => router.push('/singin'),
+        },
+      ]
+    );
+  };
+
   const handleUpdatePassword = () => {
+    if (isGuestUser) {
+      promptSignInForProtectedSettings();
+      return;
+    }
+
     if (!currentPassword || !newPassword || !confirmNewPassword) {
       Alert.alert(t('settings.incompleteFieldsTitle'), t('settings.incompleteFieldsMessage'));
       return;
@@ -32,6 +68,11 @@ export default function SettingsScreen() {
   };
 
   const handleDeleteAccount = () => {
+    if (isGuestUser) {
+      promptSignInForProtectedSettings();
+      return;
+    }
+
     if (!confirmDeletePassword) {
       Alert.alert(t('settings.confirmationRequiredTitle'), t('settings.confirmationRequiredMessage'));
       return;
@@ -86,15 +127,22 @@ export default function SettingsScreen() {
             <View style={styles.panelCard}>
               <Text style={styles.panelTitle}>{t('settings.changePasswordTitle')}</Text>
               <Text style={styles.panelDescription}>{t('settings.changePasswordDescription')}</Text>
+              {isGuestUser && (
+                <TouchableOpacity style={styles.lockedNotice} onPress={promptSignInForProtectedSettings} activeOpacity={0.9}>
+                  <Text style={styles.lockedNoticeText}>{t('settings.loginRequiredHint')}</Text>
+                </TouchableOpacity>
+              )}
 
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>{t('settings.currentPassword')}</Text>
                 <TextInput
                   value={currentPassword}
                   onChangeText={setCurrentPassword}
-                  style={styles.input}
+                  style={[styles.input, isGuestUser && styles.inputDisabled]}
                   secureTextEntry
                   autoCapitalize="none"
+                  editable={!isGuestUser}
+                  pointerEvents={isGuestUser ? 'none' : 'auto'}
                 />
               </View>
 
@@ -103,9 +151,11 @@ export default function SettingsScreen() {
                 <TextInput
                   value={newPassword}
                   onChangeText={setNewPassword}
-                  style={styles.input}
+                  style={[styles.input, isGuestUser && styles.inputDisabled]}
                   secureTextEntry
                   autoCapitalize="none"
+                  editable={!isGuestUser}
+                  pointerEvents={isGuestUser ? 'none' : 'auto'}
                 />
               </View>
 
@@ -114,20 +164,24 @@ export default function SettingsScreen() {
                 <TextInput
                   value={confirmNewPassword}
                   onChangeText={setConfirmNewPassword}
-                  style={styles.input}
+                  style={[styles.input, isGuestUser && styles.inputDisabled]}
                   secureTextEntry
                   autoCapitalize="none"
+                  editable={!isGuestUser}
+                  pointerEvents={isGuestUser ? 'none' : 'auto'}
                 />
               </View>
 
               <TouchableOpacity style={styles.button} onPress={handleUpdatePassword} activeOpacity={0.9}>
                 <LinearGradient
-                  colors={['#A855F7', '#4F46E5']}
+                  colors={isGuestUser ? ['#4B5563', '#374151'] : ['#A855F7', '#4F46E5']}
                   start={{ x: 0, y: 0.5 }}
                   end={{ x: 1, y: 0.5 }}
                   style={styles.buttonGradient}
                 >
-                  <Text style={styles.buttonText}>{t('settings.saveNewPassword')}</Text>
+                  <Text style={styles.buttonText}>
+                    {isGuestUser ? t('settings.loginToContinue') : t('settings.saveNewPassword')}
+                  </Text>
                 </LinearGradient>
               </TouchableOpacity>
             </View>
@@ -137,26 +191,35 @@ export default function SettingsScreen() {
             <View style={styles.panelCard}>
               <Text style={styles.panelTitle}>{t('settings.deleteAccountTitle')}</Text>
               <Text style={styles.panelDescription}>{t('settings.deleteAccountDescription')}</Text>
+              {isGuestUser && (
+                <TouchableOpacity style={styles.lockedNotice} onPress={promptSignInForProtectedSettings} activeOpacity={0.9}>
+                  <Text style={styles.lockedNoticeText}>{t('settings.loginRequiredHint')}</Text>
+                </TouchableOpacity>
+              )}
 
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>{t('settings.confirmPassword')}</Text>
                 <TextInput
                   value={confirmDeletePassword}
                   onChangeText={setConfirmDeletePassword}
-                  style={styles.input}
+                  style={[styles.input, isGuestUser && styles.inputDisabled]}
                   secureTextEntry
                   autoCapitalize="none"
+                  editable={!isGuestUser}
+                  pointerEvents={isGuestUser ? 'none' : 'auto'}
                 />
               </View>
 
               <TouchableOpacity style={styles.button} onPress={handleDeleteAccount} activeOpacity={0.9}>
                 <LinearGradient
-                  colors={['#FF2B4A', '#E10098']}
+                  colors={isGuestUser ? ['#4B5563', '#374151'] : ['#FF2B4A', '#E10098']}
                   start={{ x: 0, y: 0.5 }}
                   end={{ x: 1, y: 0.5 }}
                   style={styles.buttonGradient}
                 >
-                  <Text style={styles.buttonText}>{t('settings.deleteAccountButton')}</Text>
+                  <Text style={styles.buttonText}>
+                    {isGuestUser ? t('settings.loginToContinue') : t('settings.deleteAccountButton')}
+                  </Text>
                 </LinearGradient>
               </TouchableOpacity>
             </View>
@@ -311,6 +374,24 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     paddingHorizontal: 14,
     fontSize: 15,
+  },
+  inputDisabled: {
+    opacity: 0.55,
+  },
+  lockedNotice: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(216, 180, 254, 0.25)',
+    backgroundColor: 'rgba(168, 85, 247, 0.12)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 6,
+  },
+  lockedNoticeText: {
+    color: '#E9D5FF',
+    fontSize: 13,
+    fontWeight: '600',
+    lineHeight: 18,
   },
   button: {
     marginTop: 8,
