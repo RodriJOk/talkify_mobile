@@ -1,7 +1,7 @@
 import { getRevenueCatConfig } from '@/constants/revenuecat';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text, TouchableOpacity, View, Linking, ScrollView } from 'react-native';
+import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Purchases from 'react-native-purchases';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -9,6 +9,7 @@ type PackageItem = {
   identifier: string;
   packageType?: string;
   product: {
+    identifier?: string;
     title?: string;
     description?: string;
     priceString?: string;
@@ -22,6 +23,15 @@ export default function SubscriptionPlansScreen() {
   const [annualPlan, setAnnualPlan] = useState<PackageItem | null>(null);
   const [loadError, setLoadError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [diagnosticLines, setDiagnosticLines] = useState<string[]>([]);
+
+  const buildPackageDiagnosticLine = (item: PackageItem, index: number) => {
+    const packageType = String(item.packageType ?? '-').toUpperCase();
+    const productId = String(item.product?.identifier ?? '-');
+    const period = String(item.product?.subscriptionPeriod ?? '-').toUpperCase();
+    const price = String(item.product?.priceString ?? '-');
+    return `#${index + 1} pkg=${item.identifier} | type=${packageType} | product=${productId} | period=${period} | price=${price}`;
+  };
 
   const getRevenueCatErrorMessage = (error: unknown) => {
     const err = error as any;
@@ -78,12 +88,23 @@ export default function SubscriptionPlansScreen() {
     try {
       setIsLoading(true);
       setLoadError('');
+      setDiagnosticLines([]);
 
       await configureRevenueCatIfNeeded();
 
       const offerings = await fetchOfferingsWithRetry();
       const currentOffering = offerings.current;
       const currentPackages = (currentOffering?.availablePackages ?? []) as PackageItem[];
+
+      const lines = [
+        `[RC] currentOffering=${String(currentOffering?.identifier ?? 'null')}`,
+        `[RC] availablePackages=${String(currentPackages.length)}`,
+        ...currentPackages.map((item, index) => buildPackageDiagnosticLine(item, index)),
+      ];
+      setDiagnosticLines(lines);
+      console.log('[RevenueCat][subscription_plans] Diagnostics start');
+      lines.forEach((line) => console.log(line));
+      console.log('[RevenueCat][subscription_plans] Diagnostics end');
 
       if (!currentOffering) {
         setMonthlyPlan(null);
@@ -114,11 +135,40 @@ export default function SubscriptionPlansScreen() {
 
       setMonthlyPlan(monthly ?? null);
       setAnnualPlan(annual ?? null);
+
+      console.log(
+        '[RevenueCat][subscription_plans] Match summary:',
+        JSON.stringify(
+          {
+            monthly: monthly
+              ? {
+                  packageIdentifier: monthly.identifier,
+                  packageType: monthly.packageType ?? null,
+                  productId: monthly.product?.identifier ?? null,
+                  period: monthly.product?.subscriptionPeriod ?? null,
+                  price: monthly.product?.priceString ?? null,
+                }
+              : null,
+            annual: annual
+              ? {
+                  packageIdentifier: annual.identifier,
+                  packageType: annual.packageType ?? null,
+                  productId: annual.product?.identifier ?? null,
+                  period: annual.product?.subscriptionPeriod ?? null,
+                  price: annual.product?.priceString ?? null,
+                }
+              : null,
+          },
+          null,
+          2
+        )
+      );
     } catch (error) {
       setMonthlyPlan(null);
       setAnnualPlan(null);
       const detailedError = getRevenueCatErrorMessage(error);
       setLoadError(t('subscriptionPlans.loadPlansError', { detail: detailedError }));
+      console.error('[RevenueCat][subscription_plans] loadPlans error:', error);
     } finally {
       setIsLoading(false);
     }
@@ -145,6 +195,15 @@ export default function SubscriptionPlansScreen() {
           <Text style={styles.cardEyebrow}>{t('subscriptionPlans.cardTitle')}</Text>
 
           {!!loadError && <Text style={styles.errorText}>{loadError}</Text>}
+
+          {diagnosticLines.length > 0 && (
+            <View style={styles.debugBox}>
+              <Text style={styles.debugTitle}>Diagnostics</Text>
+              {diagnosticLines.map((line) => (
+                <Text key={line} style={styles.debugLine}>{line}</Text>
+              ))}
+            </View>
+          )}
           
           {/* Plan Mensual */}
           <View style={styles.planCard}>
@@ -245,6 +304,25 @@ const styles = StyleSheet.create({
     color: '#FF5C7A',
     fontSize: 13,
     fontWeight: '600',
+  },
+  debugBox: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.35)',
+    backgroundColor: 'rgba(15, 23, 42, 0.7)',
+    padding: 12,
+    gap: 6,
+  },
+  debugTitle: {
+    color: '#E2E8F0',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+  },
+  debugLine: {
+    color: '#94A3B8',
+    fontSize: 11,
+    fontWeight: '500',
   },
   planCard: {
     borderRadius: 14,
