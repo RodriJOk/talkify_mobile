@@ -6,7 +6,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
   return {
     ...config,
-    name: config.name ?? 'talkify_mobile',
+    name: config.name ?? 'Talkify',
     slug: config.slug ?? 'talkify_mobile',
     ios: {
       ...(config.ios ?? {}),
