@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Purchases from 'react-native-purchases';
+import Purchases, { type PurchasesPackage } from 'react-native-purchases';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const API_BASE_URL = 'https://talkify.store/api';
@@ -29,6 +29,8 @@ type PaymentHistoryItem = {
   isActive: boolean;
 };
 
+type PackageItem = PurchasesPackage;
+
 export default function SubscriptionScreen() {
   const router = useRouter();
   const { t } = useTranslation();
@@ -36,7 +38,7 @@ export default function SubscriptionScreen() {
   const [isGuestUser, setIsGuestUser] = useState(false);
   const pickerOptionColor = Platform.OS === 'android' ? '#111111' : '#FFFFFF';
   const pickerPlaceholderColor = Platform.OS === 'android' ? '#6B7280' : '#8EA0C1';
-  const [packages, setPackages] = useState<any[]>([]);
+  const [packages, setPackages] = useState<PackageItem[]>([]);
   const [activeEntitlement, setActiveEntitlement] = useState<string | null>(null);
   const [activeProductId, setActiveProductId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -87,6 +89,42 @@ export default function SubscriptionScreen() {
       .sort((a, b) => new Date(b.purchaseDate).getTime() - new Date(a.purchaseDate).getTime());
   };
 
+  const inferPlanKind = (item: PackageItem): 'monthly' | 'annual' | null => {
+    const packageType = String(item.packageType ?? '').toUpperCase();
+    const packageId = String(item.identifier ?? '').toLowerCase();
+    const productId = String(item.product?.identifier ?? '').toLowerCase();
+    const period = String(item.product?.subscriptionPeriod ?? '').toUpperCase();
+
+    // Prefer explicit package type over period when provider data is inconsistent.
+    if (packageType === 'MONTHLY') return 'monthly';
+    if (packageType === 'ANNUAL') return 'annual';
+
+    if (
+      packageId.includes('month') ||
+      productId.includes('month') ||
+      packageId.includes('mensual') ||
+      productId.includes('mensual')
+    ) {
+      return 'monthly';
+    }
+
+    if (
+      packageId.includes('year') ||
+      productId.includes('year') ||
+      packageId.includes('annual') ||
+      productId.includes('annual') ||
+      packageId.includes('anual') ||
+      productId.includes('anual')
+    ) {
+      return 'annual';
+    }
+
+    if (period.includes('P1Y')) return 'annual';
+    if (period.includes('P1M')) return 'monthly';
+
+    return null;
+  };
+
   const configureRevenueCatIfNeeded = async () => {
     try {
       const purchasesAny = Purchases as any;
@@ -126,11 +164,31 @@ export default function SubscriptionScreen() {
         await configureRevenueCatIfNeeded();
 
         const offerings = await Purchases.getOfferings();
-        const currentPackages = offerings.current?.availablePackages ?? [];
-        setPackages(currentPackages);
+        const currentPackages = (offerings.current?.availablePackages ?? []) as PackageItem[];
+        const allPackages = Object.values(offerings.all ?? {}).flatMap(
+          (offering: any) => (offering?.availablePackages ?? []) as PackageItem[]
+        );
+        const sourcePackages = allPackages.length > 0 ? allPackages : currentPackages;
 
-        if (!plan && currentPackages.length > 0) {
-          setPlan(String(currentPackages[0].identifier));
+        const monthlyPackage = sourcePackages.find((item) => inferPlanKind(item) === 'monthly');
+        const annualPackage = sourcePackages.find(
+          (item) => inferPlanKind(item) === 'annual' && item.identifier !== monthlyPackage?.identifier
+        );
+
+        const prioritizedPackages = [monthlyPackage, annualPackage].filter(Boolean) as PackageItem[];
+        const prioritizedIds = new Set(prioritizedPackages.map((item) => String(item.identifier)));
+        const remainingPackages = sourcePackages.filter(
+          (item) => !prioritizedIds.has(String(item.identifier))
+        );
+        const resolvedPackages =
+          prioritizedPackages.length > 0
+            ? [...prioritizedPackages, ...remainingPackages]
+            : sourcePackages;
+
+        setPackages(resolvedPackages);
+
+        if (!plan && resolvedPackages.length > 0) {
+          setPlan(String(resolvedPackages[0].identifier));
         }
 
         const customerInfo = await Purchases.getCustomerInfo();
@@ -255,7 +313,7 @@ export default function SubscriptionScreen() {
     );
   };
 
-  const registerSubscriptionInBackend = async (purchaseResult: any, selectedPackage: any, entitlementId: string | null) => {
+  const registerSubscriptionInBackend = async (purchaseResult: any, selectedPackage: PackageItem, entitlementId: string | null) => {
     try {
       const userInfo = await AsyncStorage.getItem('user_information');
       const token = await AsyncStorage.getItem('token');
@@ -269,15 +327,9 @@ export default function SubscriptionScreen() {
       const session = JSON.parse(userInfo);
       const userId = session.id || null;
 
-      // Mapear el tipo de suscripción
-      const subscriptionPeriod = selectedPackage?.product?.subscriptionPeriod || '';
-      let subscriptionType = 'annual'; // por defecto
-      
-      if (subscriptionPeriod.includes('P1M') || selectedPackage?.packageType === 'MONTHLY') {
-        subscriptionType = 'monthly';
-      } else if (subscriptionPeriod.includes('P1Y') || selectedPackage?.packageType === 'ANNUAL') {
-        subscriptionType = 'annual';
-      }
+      // Detecta mensual/anual con la misma prioridad usada al cargar planes.
+      const detectedPlanKind = inferPlanKind(selectedPackage);
+      const subscriptionType = detectedPlanKind === 'monthly' ? 'monthly' : 'annual';
 
       // Calcular fechas
       const now = new Date();
