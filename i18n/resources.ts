@@ -23,6 +23,7 @@ export const resources = {
         settings: 'Configuración',
         newCardForMe: 'Carta Personalizada',
         newCardForGame: 'Carta para el Juego',
+        subscriptionPlans: 'Planes de Suscripción',
       },
       settings: {
         title: 'Configuración',
@@ -336,6 +337,7 @@ export const resources = {
         settings: 'Settings',
         newCardForMe: 'Custom Card',
         newCardForGame: 'Game Card',
+        subscriptionPlans: 'Subscription Plans',
       },
       settings: {
         title: 'Settings',

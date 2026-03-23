@@ -173,6 +173,7 @@ function RootLayoutContent() {
           <Drawer.Screen name="forget_password" options={{ headerShown: false, drawerItemStyle: { display: 'none' } }} />
           <Drawer.Screen name="terms_and_conditions" options={{ headerShown: false, drawerItemStyle: { display: 'none' } }} />
           <Drawer.Screen name="new_card_for_me" options={{ title: t('navigation.newCardForMe') }} />
+          <Drawer.Screen name="subscription_plans" options={{ title: t('navigation.subscriptionPlans') }} />
           <Drawer.Screen name="new_card_for_game" options={{ title: t('navigation.newCardForGame') }} />
         </Drawer>
         {shouldShowTabBar && <CustomBottomTabBar />}
