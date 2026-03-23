@@ -299,20 +299,6 @@ export default function SubscriptionScreen() {
 
   const subscriptionStateText = isSubscriptionActive ? t('subscription.activeState') : t('subscription.inactiveState');
 
-  const promptSignInForPayments = () => {
-    Alert.alert(
-      t('subscription.authRequiredTitle'),
-      t('subscription.authRequiredMessage'),
-      [
-        { text: t('subscription.authRequiredCancel'), style: 'cancel' },
-        {
-          text: t('subscription.authRequiredAction'),
-          onPress: () => router.push('/singin'),
-        },
-      ]
-    );
-  };
-
   const registerSubscriptionInBackend = async (purchaseResult: any, selectedPackage: PackageItem, entitlementId: string | null) => {
     try {
       const userInfo = await AsyncStorage.getItem('user_information');
@@ -378,16 +364,6 @@ export default function SubscriptionScreen() {
   };
 
   const handlePurchase = async () => {
-    const [storedUserId, storedToken] = await Promise.all([
-      AsyncStorage.getItem('user_id'),
-      AsyncStorage.getItem('token'),
-    ]);
-
-    if (!storedUserId || !storedToken) {
-      promptSignInForPayments();
-      return;
-    }
-
     if (!selectedPackage) {
       Alert.alert(t('subscription.planRequiredTitle'), t('subscription.planRequiredMessage'));
       return;
@@ -423,6 +399,56 @@ export default function SubscriptionScreen() {
       const errorMessage = error?.message || error?.code || t('subscription.purchaseErrorFallback');
       console.log('Purchase error completo:', JSON.stringify(error, null, 2));
       Alert.alert(t('common.error'), errorMessage);
+    }
+  };
+
+  const handleRestorePurchases = async () => {
+    try {
+      setIsLoading(true);
+      setLoadError('');
+
+      await configureRevenueCatIfNeeded();
+
+      const customerInfo = await Purchases.restorePurchases();
+      setPaymentHistory(buildPaymentHistory(customerInfo));
+
+      const activeKeys = Object.keys(customerInfo.entitlements.active ?? {});
+      const entitlementId = activeKeys.length > 0 ? activeKeys[0] : null;
+      setActiveEntitlement(entitlementId);
+      setActiveProductId(
+        entitlementId ? customerInfo.entitlements.active[entitlementId]?.productIdentifier ?? null : null
+      );
+
+      if (entitlementId) {
+        Alert.alert(
+          t('subscription.restoreSuccessTitle', 'Compras restauradas'),
+          t(
+            'subscription.restoreSuccessMessage',
+            'Tu suscripción anterior fue restaurada correctamente.'
+          )
+        );
+      } else {
+        Alert.alert(
+          t('subscription.restoreEmptyTitle', 'Sin compras para restaurar'),
+          t(
+            'subscription.restoreEmptyMessage',
+            'No se encontraron compras previas asociadas a esta cuenta de App Store.'
+          )
+        );
+      }
+    } catch (error: any) {
+      if (error?.userCancelled) {
+        return;
+      }
+
+      const errorMessage = error?.message || error?.code || t('subscription.restoreErrorFallback', 'No se pudieron restaurar las compras.');
+      Alert.alert(
+        t('subscription.restoreErrorTitle', 'Error al restaurar'),
+        errorMessage
+      );
+      console.error('[RevenueCat][subscription] restorePurchases error:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -501,6 +527,19 @@ export default function SubscriptionScreen() {
                 <Text style={styles.ctaText}>{t('subscription.pay')}</Text>
               </TouchableOpacity>
             </View>
+
+            {Platform.OS === 'ios' && (
+              <TouchableOpacity
+                style={[styles.restoreButton, isLoading && styles.ctaButtonDisabled]}
+                activeOpacity={0.9}
+                onPress={handleRestorePurchases}
+                disabled={isLoading}
+              >
+                <Text style={styles.restoreText}>
+                  {t('subscription.restorePurchases', 'Restaurar compras')}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -625,7 +664,6 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     alignItems: 'stretch',
     gap: 12,
-    height: 100,
   },
   selectField: {
     flex: 1,
@@ -679,6 +717,21 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '700',
+  },
+  restoreButton: {
+    minHeight: 44,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.5)',
+    backgroundColor: 'rgba(15, 23, 51, 0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  restoreText: {
+    color: '#E2E8F0',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   subscriptionStateText: {
     marginTop: 4,
