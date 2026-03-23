@@ -85,6 +85,7 @@ export default function SubscriptionPlansScreen() {
   };
 
   const loadPlans = async () => {
+    console.log('[RevenueCat][subscription_plans] Cargando planes de suscripción...');
     try {
       setIsLoading(true);
       setLoadError('');
@@ -113,25 +114,44 @@ export default function SubscriptionPlansScreen() {
         return;
       }
 
-      const monthly = currentPackages.find((item) => {
+      const inferPlanKind = (item: PackageItem): 'monthly' | 'annual' | null => {
         const packageType = String(item.packageType ?? '').toUpperCase();
+        const packageId = String(item.identifier ?? '').toLowerCase();
+        const productId = String(item.product?.identifier ?? '').toLowerCase();
         const period = String(item.product?.subscriptionPeriod ?? '').toUpperCase();
-        return (
-          packageType === 'MONTHLY' ||
-          period.includes('P1M') ||
-          item.identifier.toLowerCase().includes('month')
-        );
-      });
 
-      const annual = currentPackages.find((item) => {
-        const packageType = String(item.packageType ?? '').toUpperCase();
-        const period = String(item.product?.subscriptionPeriod ?? '').toUpperCase();
-        return (
-          packageType === 'ANNUAL' ||
-          period.includes('P1Y') ||
-          item.identifier.toLowerCase().includes('year')
-        );
-      });
+        // Prefer explicit package type from RevenueCat over derived hints.
+        if (packageType === 'MONTHLY') return 'monthly';
+        if (packageType === 'ANNUAL') return 'annual';
+
+        if (
+          packageId.includes('month') ||
+          productId.includes('month') ||
+          packageId.includes('mensual') ||
+          productId.includes('mensual')
+        ) {
+          return 'monthly';
+        }
+
+        if (
+          packageId.includes('year') ||
+          productId.includes('year') ||
+          packageId.includes('annual') ||
+          productId.includes('annual') ||
+          packageId.includes('anual') ||
+          productId.includes('anual')
+        ) {
+          return 'annual';
+        }
+
+        if (period.includes('P1Y')) return 'annual';
+        if (period.includes('P1M')) return 'monthly';
+
+        return null;
+      };
+
+      const monthly = currentPackages.find((item) => inferPlanKind(item) === 'monthly');
+      const annual = currentPackages.find((item) => inferPlanKind(item) === 'annual');
 
       setMonthlyPlan(monthly ?? null);
       setAnnualPlan(annual ?? null);
