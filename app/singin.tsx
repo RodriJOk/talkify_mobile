@@ -108,7 +108,7 @@ export default function SingIn() {
     <ScrollView contentContainerStyle={{ flexGrow: 1 }} style={{ backgroundColor: '#000a23' }}>
         <View style={{ flex: 1, backgroundColor: '#000a23', padding: 16, justifyContent: 'center' }}>
             <Image
-                source={require('@/assets/images/neon_icon_small.png')}
+                source={require('@/assets/images/neon_logo_transparente.png')}
                 style={styles.logoHeader}
             />
             <Text style={ styles.headerText }>
