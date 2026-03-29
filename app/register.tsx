@@ -11,16 +11,11 @@ export default function SingIn() {
   const router = useRouter();
   const { t } = useTranslation();
 
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [roles, setRoles] = useState<Array<{ id: number; name: string }>>([]);
   const [name, setName] = useState('');
   const [surname, setSurname] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [tipeUser, setTipeUser] = useState('');
-  const [idTipeUser, setIdTipeUser] = useState(0);
   const [aceptTerms, setAcceptTerms] = useState(false);
-  const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   const handleRegister = async () => {
@@ -124,8 +119,6 @@ export default function SingIn() {
         type: 'error',
         text1: t('register.createUserError'),
       });
-
-      setError(err.message);
     }
   };
 
