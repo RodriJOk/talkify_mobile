@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Toast from 'react-native-toast-message';
 
 
@@ -157,12 +157,14 @@ export default function SingIn() {
                     </LinearGradient>
                 </TouchableOpacity>
             </View>
-            <View style={styles.guestContainer}>
-              <Text style={styles.guestHint}>{t('signin.guestHint')}</Text>
-              <TouchableOpacity onPress={continueAsGuest} style={styles.guestButton}>
-                <Text style={styles.guestButtonText}>{t('signin.continueAsGuest')}</Text>
-              </TouchableOpacity>
-            </View>
+            {Platform.OS === 'ios' && (
+              <View style={styles.guestContainer}>
+                <Text style={styles.guestHint}>{t('signin.guestHint')}</Text>
+                <TouchableOpacity onPress={continueAsGuest} style={styles.guestButton}>
+                  <Text style={styles.guestButtonText}>{t('signin.continueAsGuest')}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
             <Toast />
         </View>
     </ScrollView>
