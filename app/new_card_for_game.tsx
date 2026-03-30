@@ -21,65 +21,88 @@ export default function NewCardForGame() {
   const { t, i18n } = useTranslation();
   const appLanguage = (i18n.resolvedLanguage || i18n.language || 'es').toLowerCase().startsWith('en') ? 'en' : 'es';
   const [content, setContent] = useState('');
-    const [isGuestUser, setIsGuestUser] = useState(false);
-    const [category, setCategory] = useState('');
-    const [status, setStatus] = useState('active');
-    const [categories, setCategories] = useState<Category[]>([]);
-    const pickerOptionColor = Platform.OS === 'android' ? '#111111' : '#FFFFFF';
-    const pickerPlaceholderColor = Platform.OS === 'android' ? '#6B7280' : '#8EA0C1';
+  const [isGuestUser, setIsGuestUser] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [category, setCategory] = useState('');
+  const [categories, setCategories] = useState<Category[]>([]);
+  const pickerOptionColor = Platform.OS === 'android' ? '#111111' : '#FFFFFF';
+  const pickerPlaceholderColor = Platform.OS === 'android' ? '#6B7280' : '#8EA0C1';
   
-    const saveCard = async () => {
-        if (isGuestUser) {
-          promptSignInForCards();
-          return;
-        }
-        if (!content.trim()) {
-          alert(t('cardsForm.emptyContent'));
-          return;
-        }
-        if (!category) {
-          alert(t('cardsForm.missingCategory'));
-          return;
-        }
-        console.log({
+  const saveCard = async () => {
+    if (isSaving) return;
+
+    if (isGuestUser) {
+      promptSignInForCards();
+      return;
+    }
+    if (!content.trim()) {
+      Toast.show({
+        type: 'error',
+        text1: t('cardsForm.emptyContent'),
+      });
+      return;
+    }
+    if (!category) {
+      Toast.show({
+        type: 'error',
+        text1: t('cardsForm.missingCategory'),
+      });
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      const authHeaders = await getAuthHeaders();
+
+      const response = await fetch(`${API_BASE_URL}/create_card_for_game`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept-Language': appLanguage,
+          'X-App-Language': appLanguage,
+          ...authHeaders,
+        },
+        body: JSON.stringify({
           content: content.trim(),
           category_id: parseInt(category, 10),
-          status,
-        });
-        try {
-          const authHeaders = await getAuthHeaders();
+          state: 'pending',
+        }),
+      });
 
-          const response = await fetch(`${API_BASE_URL}/create_card_for_game`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept-Language': appLanguage,
-              'X-App-Language': appLanguage,
-              ...authHeaders,
-            },
-            body: JSON.stringify({  
-              content: content.trim(),
-              category_id: parseInt(category, 10),
-              state: status,
-            }),
-          });
-          const data = await response.json();
-          console.log('Respuesta de la API:', data);
-          if (!response.ok) {
-            throw new Error(data?.message || t('cardsForm.saveErrorFallback'));
-          }
-          alert(t('cardsForm.saveSuccess'));
-          setContent('');
-          setCategory('');
-          setStatus('active');
-        } catch (error: any) {
-          Toast.show({
-            type: 'error',
-            text1: t('cardsForm.saveErrorTitle'),
-            text2: error.message || t('cardsForm.saveErrorFallback'),
-          });
-        }
+      const rawData = await response.text();
+      let data: any = null;
+
+      try {
+        data = rawData ? JSON.parse(rawData) : null;
+      } catch {
+        data = null;
       }
+
+      const backendMessage = data?.message || data?.error || data?.detail;
+      const backendRejected = data?.success === false || data?.ok === false || data?.status === 'error';
+
+      if (!response.ok || backendRejected) {
+        throw new Error(backendMessage || t('cardsForm.saveErrorFallback'));
+      }
+
+      Toast.show({
+        type: 'success',
+        text1: t('cardsForm.saveSuccess'),
+      });
+      setContent('');
+      setCategory('');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : t('cardsForm.saveErrorFallback');
+
+      Toast.show({
+        type: 'error',
+        text1: t('cardsForm.saveErrorTitle'),
+        text2: errorMessage,
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
     
       useEffect(() => {
         const loadSession = async () => {
@@ -199,27 +222,10 @@ export default function NewCardForGame() {
             </View>
           </View>
 
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>{t('cardsForm.state')}</Text>
-            <TouchableOpacity
-              style={[styles.selectField, isGuestUser && styles.inputDisabled]}
-              activeOpacity={0.85}
-              onPress={() => {
-                if (isGuestUser) {
-                  promptSignInForCards();
-                  return;
-                }
-                setStatus('active');
-              }}
-            >
-              <Text style={styles.selectText}>{t('cardsForm.stateActive')}</Text>
-              <Ionicons name="chevron-down" size={18} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-
           <TouchableOpacity 
             style={[styles.saveButton, isGuestUser && styles.saveButtonDisabled]} 
             activeOpacity={0.9}
+            disabled={isSaving}
             onPress={saveCard}>
             <Text style={styles.saveButtonText}>{isGuestUser ? t('newCards.loginToCreate') : t('cardsForm.saveCard')}</Text>
           </TouchableOpacity>
