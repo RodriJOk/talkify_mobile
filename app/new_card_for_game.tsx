@@ -196,6 +196,7 @@ export default function NewCardForGame() {
               numberOfLines={5}
               value={content}
               onChangeText={setContent}
+              keyboardType="default"
               placeholder={t('cardsForm.contentPlaceholder')}
               placeholderTextColor="#6E7B99"
               textAlignVertical="top"
