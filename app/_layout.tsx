@@ -8,7 +8,7 @@ import { BlurView } from 'expo-blur';
 import { useFonts } from 'expo-font';
 import { usePathname, useRouter } from 'expo-router';
 import { Drawer } from 'expo-router/drawer';
-import React, { useLayoutEffect } from 'react';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Platform, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -121,6 +121,7 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
 // --- Layout Principal ---
 function RootLayoutContent() {
   const { t } = useTranslation();
+  const router = useRouter();
 
   const [fontsLoaded] = useFonts({
     'Poppins-Black': require('@/assets/fonts/Poppins-Black.ttf'),
@@ -131,8 +132,33 @@ function RootLayoutContent() {
   });
 
   const pathname = usePathname();
-  const hideTabBarScreens = ['/singin', '/register', '/forget_password', '/terms_and_conditions'];
+  const [isOnboardingChecked, setIsOnboardingChecked] = useState(false);
+
+  const hideTabBarScreens = ['/singin', '/register', '/forget_password', '/terms_and_conditions', '/onboarding'];
   const shouldShowTabBar = !hideTabBarScreens.some(screen => pathname.startsWith(screen));
+
+  useEffect(() => {
+    const validateOnboarding = async () => {
+      if (pathname.startsWith('/onboarding')) {
+        setIsOnboardingChecked(true);
+        return;
+      }
+
+      try {
+        const onboardingCompleted = await AsyncStorage.getItem('onboarding_completed');
+        if (onboardingCompleted !== 'true') {
+          router.replace('/onboarding');
+          return;
+        }
+      } catch (error) {
+        console.error('Error checking onboarding state:', error);
+      }
+
+      setIsOnboardingChecked(true);
+    };
+
+    validateOnboarding();
+  }, [pathname, router]);
 
   useLayoutEffect(() => {
     const initRevenueCat = () => {
@@ -149,7 +175,7 @@ function RootLayoutContent() {
     initRevenueCat();
   }, []);
 
-  if (!fontsLoaded) return null;
+  if (!fontsLoaded || !isOnboardingChecked) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -172,6 +198,7 @@ function RootLayoutContent() {
           <Drawer.Screen name="register" options={{ headerShown: false, drawerItemStyle: { display: 'none' } }} />
           <Drawer.Screen name="forget_password" options={{ headerShown: false, drawerItemStyle: { display: 'none' } }} />
           <Drawer.Screen name="terms_and_conditions" options={{ headerShown: false, drawerItemStyle: { display: 'none' } }} />
+          <Drawer.Screen name="onboarding" options={{ headerShown: false, drawerItemStyle: { display: 'none' } }} />
           <Drawer.Screen name="new_card_for_me" options={{ title: t('navigation.newCardForMe') }} />
           <Drawer.Screen name="subscription_plans" options={{ title: t('navigation.subscriptionPlans') }} />
           <Drawer.Screen name="new_card_for_game" options={{ title: t('navigation.newCardForGame') }} />
