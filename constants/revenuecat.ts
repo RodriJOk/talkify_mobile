@@ -15,7 +15,8 @@ const DEFAULT_KEYS = {
     prod: 'appl_mTpdbKsVxQhYewwMFpifOTIjhKO',
   },
   android: {
-    test: 'test_iwbkorYVRAiCefjPvnARnkNYeFY',
+    test: 'goog_9nXoVhHqjKZsL7l3mX8u2b5c1v',
+    // test: 'test_iwbkorYVRAiCefjPvnARnkNYeFY',
     prod: 'goog_BZzTuGaPdPVkvCZUpkXNyYPIeHd',
   },
 };

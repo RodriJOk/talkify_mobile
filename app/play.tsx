@@ -2,24 +2,29 @@ import { buildAuthHeaders } from '@/utils/auth';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Dimensions, Modal, PanResponder, PanResponderGestureState, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { AdEventType, InterstitialAd, TestIds } from 'react-native-google-mobile-ads';
 import Animated, {
-    Easing,
-    runOnJS,
-    useAnimatedStyle,
-    useSharedValue,
-    withTiming
+  Easing,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { G, Path, Text as SvgText } from 'react-native-svg';
 
+const interstitial = InterstitialAd.createForAdRequest(TestIds.INTERSTITIAL, {
+  requestNonPersonalizedAdsOnly: true,
+});
 const { width } = Dimensions.get('window');
 // Ajustamos el tamaño para dar espacio a los brillos exteriores
 const WHEEL_SIZE = width * 0.82; 
 const RADIUS = WHEEL_SIZE / 2;
 const API_BASE_URL = 'https://talkify.store/api';
+const REWARDED_SPIN_BONUS_ENDPOINT = `${API_BASE_URL}/rewarded_rewarded_spin_bonus`;
 
 const SEGMENT_COLORS = ['#9C27B0', '#E91E63', '#D32F2F', '#FFA000', '#673AB7'];
 
@@ -254,6 +259,62 @@ export default function PlayScreen() {
     content: '',
   });
 
+  const [interstitialLoaded, setInterstitialLoaded] = useState(false);
+  const applyRewardedSpinBonus = useCallback(async () => {
+    if (!idUser || !token || infiniteSpins) return;
+
+    try {
+      const response = await fetch(REWARDED_SPIN_BONUS_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...buildAuthHeaders(token),
+        },
+        body: JSON.stringify({ id_user: Number(idUser) }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.message || 'No se pudo aplicar el bonus por anuncio.');
+      }
+
+      if (typeof data?.current_usage !== 'undefined') {
+        setCurrentUsage(Number(data.current_usage));
+      }
+
+      if (typeof data?.spin_limit !== 'undefined') {
+        setSpinLimit(Number(data.spin_limit));
+      }
+    } catch (error) {
+      console.log('Error aplicando bonus por anuncio:', error);
+      Alert.alert('Error', error instanceof Error ? error.message : 'No se pudo aplicar el bonus por anuncio.');
+    }
+  }, [idUser, infiniteSpins, token]);
+
+  const loadInterstitialAd = () => {
+    const unsuscribeLoaded = interstitial.addAdEventListener(AdEventType.LOADED, () => {
+      setInterstitialLoaded(true);
+    });
+
+    const unsuscribeClose = interstitial.addAdEventListener(AdEventType.CLOSED, async () => {
+      await applyRewardedSpinBonus();
+      setInterstitialLoaded(false);
+      interstitial.load();
+    });
+
+    interstitial.load();
+    return () => {
+      unsuscribeLoaded();
+      unsuscribeClose();
+    };
+  };
+
+  useEffect(() => {
+    const unsuscribeInterstitialEvents = loadInterstitialAd();
+
+    return unsuscribeInterstitialEvents;
+  }, [applyRewardedSpinBonus]);
+
   const backdropOpacity = useSharedValue(0);
   const cardScale = useSharedValue(0.92);
   const cardTranslateY = useSharedValue(28);
@@ -273,6 +334,7 @@ export default function PlayScreen() {
   const isGuestUser = !token;
   const remainingSpins = Math.max(spinLimit - currentUsage, 0);
   const usedSpins = Math.min(currentUsage, spinLimit);
+  const shouldShowLimitActions = !isGuestUser && !infiniteSpins && remainingSpins <= 0 && subscriptionStatus?.state !== 'active';
   const wheelData: WheelSegment[] = isGuestUser
     ? [{ id: -1, label: t('play.guestWheelLabel'), color: '#7B61FF' }]
     : categories.map((category, index) => ({
@@ -474,7 +536,7 @@ export default function PlayScreen() {
         )}
       </View>
 
-      <View style={styles.content}>
+      <View style={[styles.content, shouldShowLimitActions && styles.contentWithLimitActions]}>
         {isLoading ? (
           <Text style={styles.helperText}>{t('play.loadingRoulette')}</Text>
         ) : loadError ? (
@@ -492,6 +554,37 @@ export default function PlayScreen() {
         )}
       </View>
 
+      <View style={styles.limitSection}>
+        {
+          shouldShowLimitActions ? (
+            <View style={styles.limitActionsContainer}>
+              <Text style={styles.helperText}>{t('play.noSpinsLeft', 'No te quedan giros.')}</Text>
+              {interstitialLoaded ? (
+                <TouchableOpacity
+                  style={styles.subscriptionButton}
+                  onPress={() => {
+                    interstitial.show();
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.subscriptionButtonText}>{t('play.viewAds')}</Text>
+                </TouchableOpacity>
+              ) : (
+                <Text style={styles.helperText}>{t('play.loadingAds')}</Text>
+              )}
+
+              <TouchableOpacity
+                style={styles.subscriptionButton}
+                onPress={() => router.push('/subscription_plans')}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.subscriptionButtonText}>{t('play.subscriptionButton')}</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null
+        }
+    
+      </View>
       <Modal
         visible={resultModal.visible}
         transparent
@@ -532,16 +625,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#050A18', // Fondo oscuro profundo
   },
   header: {
+    width: '100%',
+    height: 72,
+    minHeight: 72,
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 20,
+    paddingHorizontal: 20,
+    marginTop: 8,
+    marginBottom: 8,
     zIndex: 10,
   },
   shotsLabel: {
     color: '#9BA3B2',
     fontSize: 14,
     fontWeight: 'bold',
+    flexShrink: 1,
     marginRight: 12,
   },
   shotsBadge: {
@@ -562,12 +661,42 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  contentWithLimitActions: {
+    justifyContent: 'flex-start',
+    paddingTop: 8,
+  },
+  limitSection: {
+    width: '100%',
+    paddingBottom: 14,
+  },
   helperText: {
     color: '#BFC7D5',
     fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
     paddingHorizontal: 20,
+  },
+  limitActionsContainer: {
+    width: '100%',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 20,
+  },
+  subscriptionButton: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  subscriptionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
   },
   wheelWrapper: {
     width: WHEEL_SIZE + 50,

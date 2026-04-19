@@ -1,6 +1,8 @@
 import CustomBottomTabBar from '@/components/CustomBottomTabBar';
+import { getBannerAdUnitId } from '@/constants/admob';
 import { getRevenueCatConfig } from '@/constants/revenuecat';
 import { LanguageProvider } from '@/providers/LanguageProvider';
+import { buildAuthHeaders } from '@/utils/auth';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DrawerContentComponentProps, DrawerContentScrollView, DrawerItem } from '@react-navigation/drawer';
@@ -12,8 +14,11 @@ import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Platform, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { BannerAd, BannerAdSize } from 'react-native-google-mobile-ads';
 import Purchases, { LOG_LEVEL } from 'react-native-purchases';
 import Toast from 'react-native-toast-message';
+
+const API_BASE_URL = 'https://talkify.store/api';
 
 // --- Contenido Personalizado del Drawer ---
 function CustomDrawerContent(props: DrawerContentComponentProps) {
@@ -133,6 +138,7 @@ function RootLayoutContent() {
 
   const pathname = usePathname();
   const [isOnboardingChecked, setIsOnboardingChecked] = useState(false);
+  const [showGlobalBannerAd, setShowGlobalBannerAd] = useState(false);
 
   const hideTabBarScreens = ['/singin', '/register', '/forget_password', '/terms_and_conditions', '/onboarding'];
   const shouldShowTabBar = !hideTabBarScreens.some(screen => pathname.startsWith(screen));
@@ -175,6 +181,53 @@ function RootLayoutContent() {
     initRevenueCat();
   }, []);
 
+  useEffect(() => {
+    const loadSubscriptionStatus = async () => {
+      if (!shouldShowTabBar) {
+        setShowGlobalBannerAd(false);
+        return;
+      }
+
+      try {
+        const [storedUserId, storedToken, storedUserInfo] = await Promise.all([
+          AsyncStorage.getItem('user_id'),
+          AsyncStorage.getItem('token'),
+          AsyncStorage.getItem('user_information'),
+        ]);
+
+        const parsedUser = storedUserInfo ? JSON.parse(storedUserInfo) : null;
+        const resolvedUserId = String(storedUserId || parsedUser?.id || '').trim();
+
+        if (!resolvedUserId || !storedToken) {
+          setShowGlobalBannerAd(true);
+          return;
+        }
+
+        const response = await fetch(`${API_BASE_URL}/subscription_status/${resolvedUserId}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...buildAuthHeaders(storedToken),
+          },
+        });
+
+        const data = await response.json();
+        const subscription = data?.subscription;
+        const hasActiveSubscription =
+          response.ok &&
+          subscription?.state === 'active' &&
+          ['monthly', 'annual'].includes(subscription?.type);
+
+        setShowGlobalBannerAd(!hasActiveSubscription);
+      } catch (error) {
+        console.log('No se pudo validar suscripción global:', error);
+        setShowGlobalBannerAd(true);
+      }
+    };
+
+    loadSubscriptionStatus();
+  }, [pathname, shouldShowTabBar]);
+
   if (!fontsLoaded || !isOnboardingChecked) return null;
 
   return (
@@ -203,6 +256,15 @@ function RootLayoutContent() {
           <Drawer.Screen name="subscription_plans" options={{ title: t('navigation.subscriptionPlans') }} />
           <Drawer.Screen name="new_card_for_game" options={{ title: t('navigation.newCardForGame') }} />
         </Drawer>
+        {shouldShowTabBar && showGlobalBannerAd && (
+          <View style={styles.bannerContainer}>
+            <BannerAd
+              unitId={getBannerAdUnitId()}
+              size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+              requestOptions={{ requestNonPersonalizedAdsOnly: true }}
+            />
+          </View>
+        )}
         {shouldShowTabBar && <CustomBottomTabBar />}
       </View>
       <Toast />
@@ -288,5 +350,11 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Medium',
     fontSize: 16,
     color: '#FCA5A5',
+  },
+  bannerContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    backgroundColor: '#050A18',
   },
 });

@@ -285,7 +285,7 @@ export default function HomeScreen() {
             icon={<Ionicons name="calendar-outline" size={24} color="#EAE9FF" />}
             title={t('home.playTitle')}
             subtitle={t('home.playSubtitle')}
-            onPress={() => handleNavigation('play')}
+            onPress={() => handleNavigation('/play')}
           />
           <MenuItem
             icon={<Ionicons name="albums-outline" size={24} color="#EAE9FF" />}
@@ -297,13 +297,13 @@ export default function HomeScreen() {
             icon={<Ionicons name="card-outline" size={24} color="#EAE9FF" />}
             title={t('home.subscriptionTitle')}
             subtitle={t('home.subscriptionSubtitle')}
-            onPress={() => handleNavigation('subscription')}
+            onPress={() => handleNavigation('/subscription')}
           />
           <MenuItem
             icon={<Ionicons name="settings-outline" size={24} color="#EAE9FF" />}
             title={t('home.settingsTitle')}
             subtitle={t('home.settingsSubtitle')}
-            onPress={() => handleNavigation('settings')}
+            onPress={() => handleNavigation('/settings')}
           />
           <Toast />
         </View>
