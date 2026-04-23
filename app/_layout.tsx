@@ -54,7 +54,8 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
     { label: t('drawer.play'), route: '/play', icon: 'game-controller-outline' },
     { label: t('drawer.cards'), route: '/new_cards', icon: 'albums-outline' },
     { label: t('drawer.subscription'), route: '/subscription', icon: 'card-outline' },
-    { label: t('drawer.settings'), route: '/settings', icon: 'settings-outline' }
+    { label: t('drawer.settings'), route: '/settings', icon: 'settings-outline' },
+    // { label: t('drawer.sendMessage'), route: '/send_message', icon: 'mail-outline' },
   ], [t]);
 
   return (

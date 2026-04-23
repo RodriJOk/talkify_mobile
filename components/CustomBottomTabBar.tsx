@@ -47,6 +47,13 @@ export default function CustomBottomTabBar() {
       iconType: 'ionicons',
       title: t('tabs.settings'),
     },
+    // {
+    //   name: 'sendMessage',
+    //   route: '/send_message',
+    //   icon: 'mail-outline',
+    //   iconType: 'ionicons',
+    //   title: t('tabs.sendMessage'),
+    // },
   ], [t]);
 
   const isActive = (route: string) => {
