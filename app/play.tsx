@@ -4,8 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Dimensions, Modal, PanResponder, PanResponderGestureState, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { AdEventType, InterstitialAd, TestIds } from 'react-native-google-mobile-ads';
+import { Alert, Dimensions, Modal, PanResponder, PanResponderGestureState, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Animated, {
   Easing,
   runOnJS,
@@ -15,10 +14,14 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { G, Path, Text as SvgText } from 'react-native-svg';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const admob: any = !__DEV__ ? require('react-native-google-mobile-ads') : null;
 
-const interstitial = InterstitialAd.createForAdRequest(TestIds.INTERSTITIAL, {
-  requestNonPersonalizedAdsOnly: true,
-});
+const interstitial = admob
+  ? admob.InterstitialAd.createForAdRequest(admob.TestIds.INTERSTITIAL, {
+      requestNonPersonalizedAdsOnly: true,
+    })
+  : null;
 const { width } = Dimensions.get('window');
 // Ajustamos el tamaño para dar espacio a los brillos exteriores
 const WHEEL_SIZE = width * 0.82; 
@@ -253,6 +256,8 @@ export default function PlayScreen() {
   const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
   const [subscriptionError, setSubscriptionError] = useState<string>('');
   const [infiniteSpins, setInfiniteSpins] = useState<boolean>(false);
+  const [userEmail, setUserEmail] = useState<string>('');
+  const [forcedCardId, setForcedCardId] = useState<string>('');
   const [resultModal, setResultModal] = useState<ResultModalState>({
     visible: false,
     category: '',
@@ -292,11 +297,13 @@ export default function PlayScreen() {
   }, [idUser, infiniteSpins, token]);
 
   const loadInterstitialAd = () => {
-    const unsuscribeLoaded = interstitial.addAdEventListener(AdEventType.LOADED, () => {
+    if (!interstitial) return () => {};
+
+    const unsuscribeLoaded = interstitial.addAdEventListener(admob.AdEventType.LOADED, () => {
       setInterstitialLoaded(true);
     });
 
-    const unsuscribeClose = interstitial.addAdEventListener(AdEventType.CLOSED, async () => {
+    const unsuscribeClose = interstitial.addAdEventListener(admob.AdEventType.CLOSED, async () => {
       await applyRewardedSpinBonus();
       setInterstitialLoaded(false);
       interstitial.load();
@@ -332,6 +339,7 @@ export default function PlayScreen() {
   }));
 
   const isGuestUser = !token;
+  const isAdminUser = userEmail === 'juarezrodrigo59@gmail.com';
   const remainingSpins = Math.max(spinLimit - currentUsage, 0);
   const usedSpins = Math.min(currentUsage, spinLimit);
   const shouldShowLimitActions = !isGuestUser && !infiniteSpins && remainingSpins <= 0 && subscriptionStatus?.state !== 'active';
@@ -379,6 +387,7 @@ export default function PlayScreen() {
 
         setIdUser(resolvedUserId);
         setToken(storedToken ?? '');
+        setUserEmail(parsedUser?.email ?? '');
 
         // Validar suscripción
         try {
@@ -506,11 +515,16 @@ export default function PlayScreen() {
         return;
       }
 
+      const forcedCard = forcedCardId.trim()
+        ? (cards.find(c => String(c.id) === forcedCardId.trim()) ?? null)
+        : null;
       const categoryCards = cards.filter((card) => card.category_id === resultSegment.id);
-      const selectedCard =
+      const selectedCard = forcedCard ?? (
         categoryCards.length > 0
           ? categoryCards[Math.floor(Math.random() * categoryCards.length)]
-          : null;
+          : null
+      );
+      if (forcedCardId.trim()) setForcedCardId('');
 
       openResultModal(
         resultSegment.label,
@@ -523,18 +537,29 @@ export default function PlayScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.shotsLabel}>
-          {isGuestUser
-            ? t('play.signInToSpin')
-            : (infiniteSpins ? t('play.unlimitedSpins') : t('play.spinsAvailable'))}
-        </Text>
-        {!isGuestUser && !infiniteSpins && (
-          <View style={styles.shotsBadge}>
-            <Text style={styles.shotsText}>{usedSpins} / {spinLimit}</Text>
-          </View>
-        )}
-      </View>
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        scrollEnabled={!resultModal.visible}
+      >
+      {/* Header mejorado según suscripción */}
+      {infiniteSpins && !isGuestUser ? (
+        <View style={styles.unlimitedHeaderContainer}>
+          <Text style={styles.unlimitedHeaderText}>{t('play.unlimitedSpins')}</Text>
+        </View>
+      ) : (
+        <View style={styles.header}>
+          <Text style={styles.shotsLabel}>
+            {isGuestUser ? t('play.signInToSpin') : t('play.spinsAvailable')}
+          </Text>
+          {!isGuestUser && (
+            <View style={styles.shotsBadge}>
+              <Text style={styles.shotsText}>{usedSpins} / {spinLimit}</Text>
+            </View>
+          )}
+        </View>
+      )}
 
       <View style={[styles.content, shouldShowLimitActions && styles.contentWithLimitActions]}>
         {isLoading ? (
@@ -559,18 +584,18 @@ export default function PlayScreen() {
           shouldShowLimitActions ? (
             <View style={styles.limitActionsContainer}>
               <Text style={styles.helperText}>{t('play.noSpinsLeft', 'No te quedan giros.')}</Text>
-              {interstitialLoaded ? (
-                <TouchableOpacity
-                  style={styles.subscriptionButton}
-                  onPress={() => {
-                    interstitial.show();
-                  }}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.subscriptionButtonText}>{t('play.viewAds')}</Text>
-                </TouchableOpacity>
-              ) : (
-                <Text style={styles.helperText}>{t('play.loadingAds')}</Text>
+              {!__DEV__ && (
+                interstitialLoaded ? (
+                  <TouchableOpacity
+                    style={styles.subscriptionButton}
+                    onPress={() => { interstitial?.show(); }}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={styles.subscriptionButtonText}>{t('play.viewAds')}</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <Text style={styles.helperText}>{t('play.loadingAds')}</Text>
+                )
               )}
 
               <TouchableOpacity
@@ -583,7 +608,19 @@ export default function PlayScreen() {
             </View>
           ) : null
         }
-    
+        {isAdminUser && forcedCardId === '' && (
+          <View style={styles.debugContainer}>
+            <Text style={styles.debugLabel}>🛠 Debug: ID de carta forzada</Text>
+            <TextInput
+              style={styles.debugInput}
+              value={forcedCardId}
+              onChangeText={setForcedCardId}
+              placeholder="Ej: 42"
+              placeholderTextColor="#555"
+              keyboardType="numeric"
+            />
+          </View>
+        )}
       </View>
       <Modal
         visible={resultModal.visible}
@@ -615,6 +652,7 @@ export default function PlayScreen() {
           </Animated.View>
         </View>
       </Modal>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -623,6 +661,25 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#050A18', // Fondo oscuro profundo
+  },
+  unlimitedHeaderContainer: {
+    width: '100%',
+    height: 72,
+    minHeight: 72,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginTop: 8,
+    marginBottom: 8,
+    zIndex: 10,
+  },
+  unlimitedHeaderText: {
+    color: '#7B61FF',
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
   header: {
     width: '100%',
@@ -637,11 +694,14 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   shotsLabel: {
+    borderWidth: 3,
     color: '#9BA3B2',
     fontSize: 14,
     fontWeight: 'bold',
     flexShrink: 1,
     marginRight: 12,
+    textAlign: 'center',
+    borderColor: 'rgba(248, 0, 0, 0.4)',
   },
   shotsBadge: {
     backgroundColor: 'rgba(123, 97, 255, 0.1)',
@@ -832,5 +892,30 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontSize: 18,
     fontWeight: '600',
-  }
+  },
+  debugContainer: {
+    marginHorizontal: 20,
+    marginTop: 300,
+    padding: 10,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  debugLabel: {
+    color: '#9BA3B2',
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  debugInput: {
+    height: 38,
+    backgroundColor: '#0D1A4A',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#5A46C7',
+    paddingHorizontal: 12,
+    color: '#FFF',
+    fontSize: 14,
+  },
 });

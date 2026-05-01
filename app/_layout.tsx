@@ -14,9 +14,11 @@ import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Platform, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { BannerAd, BannerAdSize } from 'react-native-google-mobile-ads';
-import Purchases, { LOG_LEVEL } from 'react-native-purchases';
 import Toast from 'react-native-toast-message';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const admobLayout: any = !__DEV__ ? require('react-native-google-mobile-ads') : null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const purchasesLib: any = !__DEV__ ? require('react-native-purchases') : null;
 
 const API_BASE_URL = 'https://talkify.store/api';
 
@@ -170,10 +172,11 @@ function RootLayoutContent() {
   useLayoutEffect(() => {
     const initRevenueCat = () => {
       try {
-        Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
+        if (!purchasesLib) return;
+        purchasesLib.default.setLogLevel(purchasesLib.LOG_LEVEL.VERBOSE);
         const { selectedApiKey } = getRevenueCatConfig();
         if (selectedApiKey) {
-          Purchases.configure({ apiKey: selectedApiKey });
+          purchasesLib.default.configure({ apiKey: selectedApiKey });
         }
       } catch (error: any) {
         console.error('[RevenueCat] Error:', error?.message);
@@ -257,11 +260,11 @@ function RootLayoutContent() {
           <Drawer.Screen name="subscription_plans" options={{ title: t('navigation.subscriptionPlans') }} />
           <Drawer.Screen name="new_card_for_game" options={{ title: t('navigation.newCardForGame') }} />
         </Drawer>
-        {shouldShowTabBar && showGlobalBannerAd && (
+        {shouldShowTabBar && showGlobalBannerAd && !__DEV__ && admobLayout && (
           <View style={styles.bannerContainer}>
-            <BannerAd
+            <admobLayout.BannerAd
               unitId={getBannerAdUnitId()}
-              size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+              size={admobLayout.BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
               requestOptions={{ requestNonPersonalizedAdsOnly: true }}
             />
           </View>

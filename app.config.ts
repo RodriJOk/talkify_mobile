@@ -12,6 +12,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     if (Array.isArray(plugin)) return plugin[0] === 'react-native-google-mobile-ads';
     return false;
   });
+  // const hasGoogleMobileAdsPlugin = "";
 
   if (!hasGoogleMobileAdsPlugin) {
     plugins.push([

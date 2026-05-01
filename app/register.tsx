@@ -6,8 +6,9 @@ import { useTranslation } from 'react-i18next';
 import { StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import Toast from 'react-native-toast-message';
+import Modal from 'react-native-modal';
 
-export default function SingIn() {
+export default function Register() {
   const router = useRouter();
   const { t } = useTranslation();
 
@@ -17,66 +18,47 @@ export default function SingIn() {
   const [password, setPassword] = useState('');
   const [aceptTerms, setAcceptTerms] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalMessage, setModalMessage] = useState('');
 
   const handleRegister = async () => {
     if (!name || !surname || !email || !password) {
-      Toast.show({
-        type: 'error',
-        text1: t('register.fillAllFields'),
-      });
+      setModalMessage(t('register.fillAllFields'));
+      setModalVisible(true);
       return;
     }
 
     if (!name || name.length < 2) {
-      Toast.show({
-        type: 'error',
-        text1: t('register.invalidName'),
-      });
+      setModalMessage(t('register.invalidName'));
+      setModalVisible(true);
       return;
     }
 
     if (!surname || surname.length < 2) {
-      Toast.show({
-        type: 'error',
-        text1: t('register.invalidSurname'),
-      });
+      setModalMessage(t('register.invalidSurname'));
+      setModalVisible(true);
       return;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      Toast.show({
-        type: 'error',
-        text1: t('register.invalidEmail'),
-      });
+      setModalMessage(t('register.invalidEmail'));
+      setModalVisible(true);
       return;
     }
     
     if (!aceptTerms) {
-      Toast.show({
-        type: 'error',
-        text1: t('register.mustAcceptTerms'),
-      });
+      setModalMessage(t('register.mustAcceptTerms'));
+      setModalVisible(true);
       return;
     }
 
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
     if (!passwordRegex.test(password)) {
-      Toast.show({
-        type: 'error',
-        text1: t('register.invalidPasswordLine1'),
-        text2: t('register.invalidPasswordLine2'),
-      });
+      setModalMessage(`${t('register.invalidPasswordLine1') + '\n' + t('register.invalidPasswordLine2')}`);
+      setModalVisible(true);
       return;
     }
-
-    console.log('Handling register with:', {
-      name,
-      surname,
-      email,
-      password,
-      acepted_terms: aceptTerms === true ? "true" : "false",
-    });
 
     try {
       const response = await fetch('https://talkify.store/api/register', {
@@ -97,10 +79,15 @@ export default function SingIn() {
       const data = await response.json();
       console.log('Response data:', data);
       if (!response.ok) {
-        Toast.show({
-          type: 'error',
-          text1: t('register.createUserError'),
-        });
+        if (data?.message && typeof data.message === 'string' && data.message.toLowerCase().includes('password')) {
+          setModalMessage(data.message);
+          setModalVisible(true);
+        } else {
+          Toast.show({
+            type: 'error',
+            text1: t('register.createUserError'),
+          });
+        }
         throw new Error(data.message || t('register.registerErrorFallback'));
       }
 
@@ -111,14 +98,19 @@ export default function SingIn() {
       });
 
       setTimeout(() => {
-        router.push('/');
+        router.push('/singin');
       }, 3000);
 
     } catch (err: any) {
-      Toast.show({
-        type: 'error',
-        text1: t('register.createUserError'),
-      });
+      if (err?.message && err.message.toLowerCase().includes('password')) {
+        setModalMessage(err.message);
+        setModalVisible(true);
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: t('register.createUserError'),
+        });
+      }
     }
   };
 
@@ -131,20 +123,35 @@ export default function SingIn() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollContent}>
-      <View style={styles.container}>
-          <Text style={ styles.headerText }>
-              {t('register.title')}
-          </Text>
+    <>
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>{t('register.passwordErrorTitle') || 'Error de registro'}</Text>
+            <Text style={styles.modalMessage}>{modalMessage}</Text>
+            <TouchableOpacity style={styles.modalButton} onPress={() => setModalVisible(false)}>
+              <Text style={styles.modalButtonText}>{t('common.ok') || 'OK'}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.container}>
+          <Text style={styles.headerText}>{t('register.title')}</Text>
           <View style={styles.containerInput}>
             <Text style={styles.label}>{t('register.nameLabel')}</Text>
             <TextInput
-                placeholder={t('register.namePlaceholder')}
-                value={name}
-                onChangeText={setName}
-                style={styles.input}
-                autoCapitalize="none"
-                keyboardType="email-address"
+              placeholder={t('register.namePlaceholder')}
+              value={name}
+              onChangeText={setName}
+              style={styles.input}
+              autoCapitalize="none"
+              keyboardType="email-address"
             />
           </View>
           <View style={styles.containerInput}>
@@ -156,7 +163,7 @@ export default function SingIn() {
               style={styles.input}
               autoCapitalize="none"
               keyboardType="default"
-          />
+            />
           </View>
           <View style={styles.containerInput}>
             <Text style={styles.label}>{t('register.emailLabel')}</Text>
@@ -167,7 +174,7 @@ export default function SingIn() {
               style={styles.input}
               autoCapitalize="none"
               keyboardType="email-address"
-          />
+            />
           </View>
           <View style={styles.containerInput}>
             <Text style={styles.label}>{t('register.passwordLabel')}</Text>
@@ -192,20 +199,20 @@ export default function SingIn() {
             </View>
           </View>
           <View style={styles.containerTermsAndConditions}>
-              <Switch
-                value={aceptTerms}
-                onValueChange={setAcceptTerms}
-                thumbColor={aceptTerms ? '#007BFF' : '#ccc'}
-                trackColor={{ false: '#ccc', true: '#80bdff' }}
-              />
-              <Text style={[styles.label, { marginLeft: 8 }]}>
-                  {t('register.acceptTermsPrefix')}
-                  <Text
-                      style={{ color: '#007BFF', textDecorationLine: 'underline' }}
-                      onPress={handleTermsAndConditions}>
-                  {t('register.acceptTermsLink')}
-                  </Text>
+            <Switch
+              value={aceptTerms}
+              onValueChange={setAcceptTerms}
+              thumbColor={aceptTerms ? '#007BFF' : '#ccc'}
+              trackColor={{ false: '#ccc', true: '#80bdff' }}
+            />
+            <Text style={[styles.label, { marginLeft: 8 }]}>
+              {t('register.acceptTermsPrefix')}
+              <Text
+                style={{ color: '#007BFF', textDecorationLine: 'underline' }}
+                onPress={handleTermsAndConditions}>
+                {t('register.acceptTermsLink')}
               </Text>
+            </Text>
           </View>
           <View style={styles.container_buttons_CTA}>
             <TouchableOpacity style={styles.backButton} onPress={goBack}>
@@ -224,8 +231,9 @@ export default function SingIn() {
             </TouchableOpacity>
           </View>
           <Toast />
-      </View>
-    </ScrollView>
+        </View>
+      </ScrollView>
+    </>
   );
 }
 
@@ -344,5 +352,48 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 8,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 28,
+    alignItems: 'center',
+    maxWidth: 340,
+    minWidth: 260,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    color: '#a855f7',
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: 15,
+    color: '#222',
+    marginBottom: 18,
+    textAlign: 'center',
+  },
+  modalButton: {
+    backgroundColor: '#a855f7',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 28,
+  },
+  modalButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });
