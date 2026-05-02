@@ -694,14 +694,12 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   shotsLabel: {
-    borderWidth: 3,
     color: '#9BA3B2',
     fontSize: 14,
     fontWeight: 'bold',
     flexShrink: 1,
     marginRight: 12,
     textAlign: 'center',
-    borderColor: 'rgba(248, 0, 0, 0.4)',
   },
   shotsBadge: {
     backgroundColor: 'rgba(123, 97, 255, 0.1)',
