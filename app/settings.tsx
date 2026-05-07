@@ -321,9 +321,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   flagIcon: {
-    width: 36,
-    height: 24,
-    borderRadius: 4,
+    width: 30,
+    height: 30,
+    borderRadius: 20,
     marginRight: 0,
     backgroundColor: '#222',
     justifyContent: 'center',
