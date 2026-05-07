@@ -3,16 +3,17 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Alert, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useLanguage } from '@/providers/LanguageProvider';
 
+type LanguageCode = 'es' | 'en' | 'pt' | 'de';
 export default function SettingsScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const { t } = useTranslation();
-  const { language, setLanguage } = useLanguage();
+  const { language, setLanguage } = useLanguage() as { language: LanguageCode; setLanguage: (lang: LanguageCode) => void };
   const [isGuestUser, setIsGuestUser] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -98,25 +99,60 @@ export default function SettingsScreen() {
             <Text style={styles.panelTitle}>{t('settings.languageTitle')}</Text>
             <Text style={styles.panelDescription}>{t('settings.languageDescription')}</Text>
 
-            <View style={styles.languageOptionsRow}>
+            <View style={styles.languageOptionsColumn}>
               <TouchableOpacity
                 style={[styles.languageOption, language === 'es' && styles.languageOptionActive]}
                 activeOpacity={0.9}
                 onPress={() => setLanguage('es')}
               >
-                <Text style={[styles.languageOptionText, language === 'es' && styles.languageOptionTextActive]}>
-                  {t('settings.languageSpanish')}
-                </Text>
+                <View style={styles.languageOptionContent}>
+                  <Image source={require('../assets/images/flags/es.png')} style={styles.flagIcon} />
+                  <Text style={[styles.languageOptionText, language === 'es' && styles.languageOptionTextActive]}>
+                    {t('settings.languageSpanish')}
+                  </Text>
+                </View>
               </TouchableOpacity>
-
               <TouchableOpacity
                 style={[styles.languageOption, language === 'en' && styles.languageOptionActive]}
                 activeOpacity={0.9}
                 onPress={() => setLanguage('en')}
               >
-                <Text style={[styles.languageOptionText, language === 'en' && styles.languageOptionTextActive]}>
-                  {t('settings.languageEnglish')}
-                </Text>
+                <View style={styles.languageOptionContent}>
+                  <Image source={require('../assets/images/flags/gb.png')} style={styles.flagIcon} />
+                  <Text style={[styles.languageOptionText, language === 'en' && styles.languageOptionTextActive]}>
+                    {t('settings.languageEnglish')}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.languageOption, language === 'pt' && styles.languageOptionActive]}
+                activeOpacity={0.9}
+                onPress={() => setLanguage('pt')}
+              >
+                <View style={styles.languageOptionContent}>
+                  <Image source={require('../assets/images/flags/pt.png')} style={styles.flagIcon} />
+                  <Text style={[styles.languageOptionText, language === 'pt' && styles.languageOptionTextActive]}>
+                    {t('settings.languagePortuguese')}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.languageOption,
+                  language === 'de' ? styles.languageOptionActive : null,
+                ]}
+                activeOpacity={0.9}
+                onPress={() => setLanguage('de')}
+              >
+                <View style={styles.languageOptionContent}>
+                  <Image source={require('../assets/images/flags/de.png')} style={styles.flagIcon} />
+                  <Text style={[
+                    styles.languageOptionText,
+                    language === 'de' ? styles.languageOptionTextActive : null,
+                  ]}>
+                    {t('settings.languageGerman')}
+                  </Text>
+                </View>
               </TouchableOpacity>
             </View>
           </View>
@@ -274,10 +310,33 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     width: '100%',
   },
-  languageOptionsRow: {
-    flexDirection: 'row',
+  languageOptionsColumn: {
+    flexDirection: 'column',
     gap: 10,
     marginTop: 4,
+  },
+  languageOptionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  flagIcon: {
+    width: 36,
+    height: 24,
+    borderRadius: 4,
+    marginRight: 0,
+    backgroundColor: '#222',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  languageOptionText: {
+    color: '#BFC7D5',
+    fontSize: 15,
+    fontWeight: '600',
+    marginLeft: 16,
+    minWidth: 120,
+    textAlign: 'left',
   },
   languageOption: {
     flex: 1,
@@ -291,11 +350,6 @@ const styles = StyleSheet.create({
   languageOptionActive: {
     borderColor: '#8B5CF6',
     backgroundColor: 'rgba(139, 92, 246, 0.20)',
-  },
-  languageOptionText: {
-    color: '#BFC7D5',
-    fontSize: 15,
-    fontWeight: '600',
   },
   languageOptionTextActive: {
     color: '#FFFFFF',
