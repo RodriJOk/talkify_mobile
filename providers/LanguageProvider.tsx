@@ -13,7 +13,13 @@ type LanguageContextValue = {
   setLanguage: (nextLanguage: AppLanguage) => Promise<void>;
 };
 
-const LanguageContext = createContext<LanguageContextValue | undefined>(undefined);
+const defaultContextValue: LanguageContextValue = {
+  language: 'es',
+  isReady: false,
+  setLanguage: async () => {},
+};
+
+const LanguageContext = createContext<LanguageContextValue>(defaultContextValue);
 
 const getInitialDeviceLanguage = (): AppLanguage => {
   const locale = getLocales()?.[0]?.languageCode?.toLowerCase();
@@ -60,17 +66,9 @@ export function LanguageProvider({ children }: Props) {
 
   const value = useMemo(() => ({ language, isReady, setLanguage }), [language, isReady, setLanguage]);
 
-  if (!isReady) return null;
-
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }
 
 export function useLanguage() {
-  const context = useContext(LanguageContext);
-
-  if (!context) {
-    throw new Error('useLanguage must be used within LanguageProvider');
-  }
-
-  return context;
+  return useContext(LanguageContext);
 }
