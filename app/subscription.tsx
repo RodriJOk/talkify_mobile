@@ -48,6 +48,21 @@ export default function SubscriptionScreen() {
   const [backendStatusError, setBackendStatusError] = useState('');
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistoryItem[]>([]);
 
+  const formatProductId = (productId: string): string => {
+    const lower = productId.toLowerCase();
+    if (lower.includes('month') || lower.includes('mensual')) {
+      return t('subscriptionPlans.monthlyTitle');
+    }
+    if (
+      lower.includes('year') ||
+      lower.includes('annual') ||
+      lower.includes('anual')
+    ) {
+      return t('subscriptionPlans.annualTitle');
+    }
+    return productId;
+  };
+
   const formatDateLabel = (isoDate: string) => {
     if (!isoDate) return '-';
     const date = new Date(isoDate);
@@ -528,6 +543,8 @@ export default function SubscriptionScreen() {
               </TouchableOpacity>
             </View>
 
+            <Text style={styles.autoRenewalNote}>{t('subscription.autoRenewalNote')}</Text>
+
             {Platform.OS === 'ios' && (
               <TouchableOpacity
                 style={[styles.restoreButton, isLoading && styles.ctaButtonDisabled]}
@@ -559,7 +576,7 @@ export default function SubscriptionScreen() {
           ) : (
             paymentHistory.map((item) => (
               <View key={`${item.productId}-${item.purchaseDate}`} style={styles.historyItem}>
-                <Text style={styles.historyProduct}>{item.productId}</Text>
+                <Text style={styles.historyProduct}>{formatProductId(item.productId)}</Text>
                 <Text style={styles.historyLine}>{t('subscription.purchaseDate', { date: formatDateLabel(item.purchaseDate) })}</Text>
                 <Text style={[styles.historyState, item.isActive ? styles.historyStateActive : styles.historyStateInactive]}>
                   {item.isActive ? t('subscription.active') : t('subscription.inactive')}
@@ -738,6 +755,14 @@ const styles = StyleSheet.create({
     color: '#D8B4FE',
     fontSize: 13,
     fontWeight: '700',
+  },
+  autoRenewalNote: {
+    color: '#94A3B8',
+    fontSize: 11,
+    fontWeight: '500',
+    lineHeight: 16,
+    textAlign: 'center',
+    paddingHorizontal: 4,
   },
   historyEmptyText: {
     color: '#B3C0D9',

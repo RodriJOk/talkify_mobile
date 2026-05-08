@@ -216,7 +216,7 @@ export default function SubscriptionPlansScreen() {
 
           {!!loadError && <Text style={styles.errorText}>{loadError}</Text>}
 
-          {diagnosticLines.length > 0 && (
+          {__DEV__ && diagnosticLines.length > 0 && (
             <View style={styles.debugBox}>
               <Text style={styles.debugTitle}>Diagnostics</Text>
               {diagnosticLines.map((line) => (
@@ -229,7 +229,7 @@ export default function SubscriptionPlansScreen() {
           <View style={styles.planCard}>
             <Text style={styles.planTitle}>{t('subscriptionPlans.monthlyTitle')}</Text>
             <Text style={styles.planDescription}>
-              {monthlyPlan?.product?.description ?? t('subscriptionPlans.monthlyDuration')}
+              {monthlyPlan?.product?.description?.trim() || t('subscriptionPlans.monthlyFeatures')}
             </Text>
             <Text style={styles.planPrice}>
               {monthlyPlan ? monthlyPlan.product.priceString : t('subscriptionPlans.notAvailable')}
@@ -240,7 +240,7 @@ export default function SubscriptionPlansScreen() {
           <View style={styles.planCard}>
             <Text style={styles.planTitle}>{t('subscriptionPlans.annualTitle')}</Text>
             <Text style={styles.planDescription}>
-              {annualPlan?.product?.description ?? t('subscriptionPlans.annualDuration')}
+              {annualPlan?.product?.description?.trim() || t('subscriptionPlans.annualFeatures')}
             </Text>
             <Text style={styles.planPrice}>
               {annualPlan ? annualPlan.product.priceString : t('subscriptionPlans.notAvailable')}
@@ -251,18 +251,18 @@ export default function SubscriptionPlansScreen() {
         {/* --- SECCIÓN REQUERIDA POR APPLE (GUIDELINE 3.1.2) --- */}
         <View style={styles.legalSection}>
           <Text style={styles.legalDisclaimer}>
-            {t('subscriptionPlans.legalDisclaimer', 'El pago se cargará a tu cuenta de iTunes al confirmar la compra. La suscripción se renueva automáticamente a menos que se cancele 24 horas antes del final del período actual.')}
+            {t('subscriptionPlans.legalDisclaimer')}
           </Text>
           
           <View style={styles.legalLinksContainer}>
             <TouchableOpacity onPress={() => openLink('https://www.apple.com/legal/internet-services/itunes/dev/stdeula/')}>
-              <Text style={styles.legalLink}>{t('subscriptionPlans.termsOfUse', 'Terms of Use (EULA)')}</Text>
+              <Text style={styles.legalLink}>{t('subscriptionPlans.termsOfUse')}</Text>
             </TouchableOpacity>
             
             <Text style={styles.legalDivider}>•</Text>
             
             <TouchableOpacity onPress={() => openLink('https://talkify.store/privacy_policy')}>
-              <Text style={styles.legalLink}>{t('subscriptionPlans.privacyPolicy', 'Privacy Policy')}</Text>
+              <Text style={styles.legalLink}>{t('subscriptionPlans.privacyPolicy')}</Text>
             </TouchableOpacity>
           </View>
         </View>

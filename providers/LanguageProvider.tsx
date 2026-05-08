@@ -38,9 +38,11 @@ export function LanguageProvider({ children }: Props) {
     const bootstrap = async () => {
       try {
         const storedLanguage = await AsyncStorage.getItem(STORAGE_LANGUAGE_KEY);
-        const initialLanguage: AppLanguage = storedLanguage === 'en' || storedLanguage === 'es'
-          ? storedLanguage
-          : getInitialDeviceLanguage();
+        const validLanguages: AppLanguage[] = ['es', 'en', 'pt', 'de'];
+        const initialLanguage: AppLanguage =
+          validLanguages.includes(storedLanguage as AppLanguage)
+            ? (storedLanguage as AppLanguage)
+            : getInitialDeviceLanguage();
 
         await i18n.changeLanguage(initialLanguage);
         setLanguageState(initialLanguage);
