@@ -1,3 +1,4 @@
+import { getInterstitialAdUnitId } from '@/constants/admob';
 import { buildAuthHeaders } from '@/utils/auth';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -18,7 +19,7 @@ import Svg, { G, Path, Text as SvgText } from 'react-native-svg';
 const admob: any = !__DEV__ ? require('react-native-google-mobile-ads') : null;
 
 const interstitial = admob
-  ? admob.InterstitialAd.createForAdRequest(admob.TestIds.INTERSTITIAL, {
+  ? admob.InterstitialAd.createForAdRequest(getInterstitialAdUnitId(), {
       requestNonPersonalizedAdsOnly: true,
     })
   : null;

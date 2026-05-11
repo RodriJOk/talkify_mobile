@@ -2,13 +2,13 @@
   "expo": {
     "name": "Talkify",
     "slug": "talkify_mobile",
-    "version": "1.0.3",
+    "version": "1.0.5",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "talkifymobile",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "ios": {
+    "ios": {  
       "supportsTablet": true,
       "bundleIdentifier": "com.rodrigojuarez.talkifymobile",
       "infoPlist": {
