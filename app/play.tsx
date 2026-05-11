@@ -5,7 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Dimensions, Modal, PanResponder, PanResponderGestureState, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Dimensions, Modal, PanResponder, PanResponderGestureState, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Animated, {
   Easing,
   runOnJS,
@@ -23,6 +23,9 @@ const interstitial = admob
       requestNonPersonalizedAdsOnly: true,
     })
   : null;
+
+// iOS only: module-level flag to track loaded state across remounts (tab navigation, etc.)
+let _iosInterstitialLoaded = false;
 const { width } = Dimensions.get('window');
 // Ajustamos el tamaño para dar espacio a los brillos exteriores
 const WHEEL_SIZE = width * 0.82; 
@@ -266,6 +269,8 @@ export default function PlayScreen() {
   });
 
   const [interstitialLoaded, setInterstitialLoaded] = useState(false);
+  const [iosAdLoadFailed, setIosAdLoadFailed] = useState(false);
+  const iosAdRetryRef = React.useRef(0);
   const applyRewardedSpinBonus = useCallback(async () => {
     if (!idUser || !token || infiniteSpins) return;
 
@@ -300,6 +305,50 @@ export default function PlayScreen() {
   const loadInterstitialAd = () => {
     if (!interstitial) return () => {};
 
+    if (Platform.OS === 'ios') {
+      // iOS: sync state immediately if the ad was already loaded before remount
+      if (_iosInterstitialLoaded) {
+        setInterstitialLoaded(true);
+        setIosAdLoadFailed(false);
+      }
+
+      const unsuscribeLoaded = interstitial.addAdEventListener(admob.AdEventType.LOADED, () => {
+        _iosInterstitialLoaded = true;
+        iosAdRetryRef.current = 0;
+        setIosAdLoadFailed(false);
+        setInterstitialLoaded(true);
+      });
+
+      const unsuscribeClose = interstitial.addAdEventListener(admob.AdEventType.CLOSED, async () => {
+        _iosInterstitialLoaded = false;
+        await applyRewardedSpinBonus();
+        setInterstitialLoaded(false);
+        interstitial.load();
+      });
+
+      const unsubscribeError = interstitial.addAdEventListener(admob.AdEventType.ERROR, () => {
+        _iosInterstitialLoaded = false;
+        setInterstitialLoaded(false);
+        if (iosAdRetryRef.current < 3) {
+          iosAdRetryRef.current += 1;
+          setTimeout(() => interstitial.load(), 5000 * iosAdRetryRef.current);
+        } else {
+          setIosAdLoadFailed(true);
+        }
+      });
+
+      if (!_iosInterstitialLoaded) {
+        interstitial.load();
+      }
+
+      return () => {
+        unsuscribeLoaded();
+        unsuscribeClose();
+        unsubscribeError();
+      };
+    }
+
+    // Android: original behavior unchanged
     const unsuscribeLoaded = interstitial.addAdEventListener(admob.AdEventType.LOADED, () => {
       setInterstitialLoaded(true);
     });
@@ -585,7 +634,7 @@ export default function PlayScreen() {
           shouldShowLimitActions ? (
             <View style={styles.limitActionsContainer}>
               <Text style={styles.helperText}>{t('play.noSpinsLeft', 'No te quedan giros.')}</Text>
-              {!__DEV__ && (
+              {!__DEV__ && !(Platform.OS === 'ios' && iosAdLoadFailed) && (
                 interstitialLoaded ? (
                   <TouchableOpacity
                     style={styles.subscriptionButton}
