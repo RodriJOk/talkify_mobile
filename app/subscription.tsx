@@ -5,7 +5,7 @@ import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Linking, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Purchases, { type PurchasesPackage } from 'react-native-purchases';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -314,6 +314,11 @@ export default function SubscriptionScreen() {
 
   const subscriptionStateText = isSubscriptionActive ? t('subscription.activeState') : t('subscription.inactiveState');
 
+  // Función para abrir enlaces legales
+  const openLink = (url: string) => {
+    Linking.openURL(url).catch((err) => console.error("Couldn't load page", err));
+  };
+
   const registerSubscriptionInBackend = async (purchaseResult: any, selectedPackage: PackageItem, entitlementId: string | null) => {
     try {
       const userInfo = await AsyncStorage.getItem('user_information');
@@ -509,9 +514,10 @@ export default function SubscriptionScreen() {
               >
                 <Picker.Item label={t('subscription.selectPlan')} value="" color={pickerPlaceholderColor} />
                 {packages.map((item) => {
-                  const title = item?.product?.title ?? t('subscription.planFallback');
+                  const planKind = inferPlanKind(item);
+                  const duration = planKind === 'monthly' ? t('subscriptionPlans.monthlyTitle') : planKind === 'annual' ? t('subscriptionPlans.annualTitle') : (item?.product?.title ?? t('subscription.planFallback'));
                   const price = item?.product?.priceString ?? '';
-                  const label = price ? `${title} (${price})` : title;
+                  const label = price ? `${duration} - ${price}` : duration;
                   return (
                     <Picker.Item
                       key={String(item.identifier)}
@@ -561,6 +567,16 @@ export default function SubscriptionScreen() {
         </View>
 
         <View style={styles.card}>
+          <Text style={styles.cardEyebrow}>{t('subscription.benefitsTitle')}</Text>
+          {(['benefit1', 'benefit2', 'benefit3', 'benefit4'] as const).map((key) => (
+            <View key={key} style={styles.benefitRow}>
+              <Text style={styles.benefitIcon}>✓</Text>
+              <Text style={styles.benefitText}>{t(`subscription.${key}`)}</Text>
+            </View>
+          ))}
+        </View>
+
+        <View style={styles.card}>
           <Text style={styles.cardEyebrow}>{t('subscription.payments')}</Text>
 
           {isGuestUser && (
@@ -584,6 +600,25 @@ export default function SubscriptionScreen() {
               </View>
             ))
           )}
+        </View>
+
+        {/* --- SECCIÓN REQUERIDA POR APPLE (GUIDELINE 3.1.2) --- */}
+        <View style={styles.legalSection}>
+          <Text style={styles.legalDisclaimer}>
+            {t('subscriptionPlans.legalDisclaimer')}
+          </Text>
+          
+          <View style={styles.legalLinksContainer}>
+            <TouchableOpacity onPress={() => openLink('https://www.apple.com/legal/internet-services/itunes/dev/stdeula/')}>
+              <Text style={styles.legalLink}>{t('subscriptionPlans.termsOfUse')}</Text>
+            </TouchableOpacity>
+            
+            <Text style={styles.legalDivider}>•</Text>
+            
+            <TouchableOpacity onPress={() => openLink('https://talkify.store/privacy_policy')}>
+              <Text style={styles.legalLink}>{t('subscriptionPlans.privacyPolicy')}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -803,5 +838,52 @@ const styles = StyleSheet.create({
   },
   historyStateInactive: {
     color: '#FF5C7A',
+  },
+  benefitRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  benefitIcon: {
+    color: '#34D399',
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  benefitText: {
+    flex: 1,
+    color: '#C7D2FE',
+    fontSize: 13,
+    fontWeight: '500',
+    lineHeight: 20,
+  },
+  // --- Estilos Legales ---
+  legalSection: {
+    marginTop: 30,
+    alignItems: 'center',
+    paddingBottom: 20,
+  },
+  legalDisclaimer: {
+    color: '#64748B',
+    fontSize: 11,
+    textAlign: 'center',
+    lineHeight: 16,
+    marginBottom: 12,
+    paddingHorizontal: 8,
+  },
+  legalLinksContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  legalLink: {
+    color: '#8B5CF6',
+    fontSize: 12,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
+  legalDivider: {
+    color: '#64748B',
   },
 });
